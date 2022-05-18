@@ -9,7 +9,7 @@ HIDDEN_SIZE = 150
 NUM_CLASSES = 10
 NUM_EPOCHS = 2
 BATCH_SIZE = 100
-LEARNING_RATE = 0.
+LEARNING_RATE = 0.001
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
@@ -41,7 +41,7 @@ class FNN(nn.Module):
 
 class Train():
 
-  def __init__(self, backpropgate = False, model=FNN(), lr=LEARNING_RATE, num_epochs=NUM_EPOCHS, train_loader=train_loader, test_loader=test_dataset,):
+  def __init__(self, backpropgate = False, model=FNN().to(device), lr=LEARNING_RATE, num_epochs=NUM_EPOCHS, train_loader=train_loader, test_loader=test_loader,):
     self.model = model
     self.train_loader = train_loader
     self.test_loader = test_loader
@@ -74,15 +74,16 @@ class Train():
         loss.backward() #  computes the derivative of the loss w.r.t. the parameters (or anything requiring gradients) using backpropagation.
         optimizer.step() # causes the optimizer to take a step based on the gradients of the parameters.
         
-        if (i+1) % 100 == 0:
-            print("Epoch [{}/{}], Step [{}/{}], Loss: {:.2f}".format(epoch+1,self.num_epochs,i+1,n_total_steps,loss.item()))
+        #if (i+1) % 100 == 0:
+           # print("Epoch [{}/{}], Step [{}/{}], Loss: {:.2f}".format(epoch+1,self.num_epochs,i+1,n_total_steps,loss.item()))
+      print("Epoch {} and Loss: {}".format(epoch, loss.item()))
         
   def test_(self):
     with torch.no_grad():
       n_correct = 0
       n_samples = 0
       for images, labels in self.test_loader:
-        images = images.reshape(-1, INPUT_SIZE).to(device)
+        images = images.reshape(-1, 28*28).to(device)
         labels = labels.to(device)
         outputs = self.model(images)
 
@@ -117,6 +118,7 @@ class Train():
 
     while (len(additional_layers) > 0) and add_layer_choice:
       layer = additional_layers.pop(0) # incoming new layer
+      print(additional_layers)
       # 1. Add new layer to model
       self.model.layers.append(layer)
       # 2. diregarded output as output layer is retrained with every new added layer
