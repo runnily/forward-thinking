@@ -26,8 +26,8 @@ class FTNN(nn.Module):
     for l in self.layers:
       x = l(x)
 
-    #x = F.max_pool2d(x, kernel_size=x.size()[2:]) # optional global max pool
-    #x = F.dropout2d(x, 0.1, training=True) # optional can be removed 
+    x = F.max_pool2d(x, kernel_size=x.size()[2:]) # optional global max pool
+    x = F.dropout2d(x, 0.1, training=True) # optional can be removed 
 
     x = x.reshape(x.shape[0], -1)
     x = self.classifer(x)
@@ -122,7 +122,7 @@ class Train():
     if len(self.model.additional_layers) < 0:
       pass
 
-train_loader, test_loader = datasets.CIFAR_10()
+train_loader, test_loader = datasets.CIFAR_100()
 train = Train(train_loader, test_loader)
 train.add_layers()
 
