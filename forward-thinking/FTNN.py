@@ -24,8 +24,8 @@ class FTNN(nn.Module):
     for l in self.layers:
       x = l(x)
 
-    x = F.max_pool2d(x, kernel_size=x.size()[2:]) # optional global max pool
-    x = F.dropout2d(x, 0.1, training=True) # optional can be removed 
+    #x = F.max_pool2d(x, kernel_size=x.size()[2:]) # optional global max pool
+    #x = F.dropout2d(x, 0.1, training=True) # optional can be removed 
 
     x = x.reshape(x.shape[0], -1)
     x = self.classifer(x)
@@ -97,7 +97,7 @@ class Train():
       self.model.layers = self.model.additional_layers
     
     else:
-      
+
       while (len(self.model.additional_layers) > 0):
         layer = self.model.additional_layers.pop(0) # incoming new layer
         # 1. Add new layer to model
