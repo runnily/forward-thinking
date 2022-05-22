@@ -1,25 +1,32 @@
 from os import X_OK
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import datasets
 import paras
 import model 
 
 class FTNN(nn.Module):
 
-  def __init__(self, classes=paras.NUM_CLASSES, layers=model.simple_net):
+  def __init__(self, in_channels = paras.IN_CHANNELS, classes=paras.NUM_CLASSES, layers=model.simple_net):
       super(FTNN, self).__init__()
-      
-      self.classifer = nn.Linear(256, classes)
+
+      self.classifer = nn.LazyLinear(classes)
+
       self.additional_layers = layers # layers to be added into our model one at a time
       self.layers = []
       self.frozen_layers = []
       self.classes = classes
 
-
   def forward(self, x):
+    
+
     for l in self.layers:
       x = l(x)
+
+    x = F.max_pool2d(x, kernel_size=x.size()[2:]) # optional global max pool
+    x = F.dropout2d(x, 0.1, training=True) # optional can be removed 
+
     x = x.reshape(x.shape[0], -1)
     x = self.classifer(x)
     return x
@@ -59,9 +66,9 @@ class Train():
         loss.backward() #  computes the derivative of the loss w.r.t. the parameters (or anything requiring gradients) using backpropagation.
         optimizer.step() # causes the optimizer to take a step based on the gradients of the parameters.
         
-        #if (i+1) % 100 == 0:
-           # print("Epoch [{}/{}], Step [{}/{}], Loss: {:.2f}".format(epoch+1,self.num_epochs,i+1,n_total_steps,loss.item()))
-      print("Epoch {} and Loss: {}".format(epoch, loss.item()))
+        if (i+1) % 100 == 0:
+           print("Epoch [{}/{}], Step [{}/{}], Loss: {:.2f}".format(epoch+1,self.num_epochs,i+1,n_total_steps,loss.item()))
+      #print("Epoch {} and Loss: {}".format(epoch, loss.item()))
         
   def test_(self):
     with torch.no_grad():
@@ -86,29 +93,26 @@ class Train():
 
   def add_layers(self):
 
-    def choice():
-      add_layer_ques = input("would you like to add a layer? ")
-      return ("y" or add_layer_ques == "Y" or add_layer_ques == "Yes")
-
-    add_layer_choice = choice()
-
-  
-    while (len(self.model.additional_layers) > 0) and add_layer_choice:
-      layer = self.model.additional_layers.pop(0) # incoming new layer
-      # 1. Add new layer to model
-      self.model.layers.append(layer)
-      # 2. diregarded output as output layer is retrained with every new added layer
-      self.model.classifer = nn.LazyLinear(out_features=self.model.classes)
-      # 3. Train
-      self.train_()
-      # 4. Get Accuracy
-      self.test_()
-      # 5. As we have trained add layer to the frozen_layers
-      self.model.frozen_layers.append(self.model.layers[-1])
-      # 6. Freeze layers
-      self.freeze_layers_() 
+    if self.backpropgate == True:
+      self.model.layers = self.model.additional_layers
+    
+    else:
       
-      add_layer_choice = choice()
+      while (len(self.model.additional_layers) > 0):
+        layer = self.model.additional_layers.pop(0) # incoming new layer
+        # 1. Add new layer to model
+        self.model.layers.append(layer)
+        # 2. diregarded output as output layer is retrained with every new added layer
+        self.model.classifer = nn.LazyLinear(out_features=self.model.classes)
+        # 3. Train
+        self.train_()
+        # 4. Get Accuracy
+        self.test_()
+        # 5. As we have trained add layer to the frozen_layers
+        self.model.frozen_layers.append(self.model.layers[-1])
+        # 6. Freeze layers
+        self.freeze_layers_() 
+      
 
     if len(self.model.additional_layers) < 0:
       pass
