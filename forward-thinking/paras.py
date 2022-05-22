@@ -5,5 +5,3 @@ NUM_EPOCHS = 2
 BATCH_SIZE = 100
 IN_CHANNELS = 3 #1
 LEARNING_RATE = 0.001
-from torch import device, cuda
-device = device('cuda' if cuda.is_available()  else 'cpu')

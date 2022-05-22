@@ -4,18 +4,21 @@ import torch.nn as nn
 import torch.nn.functional as F
 import datasets
 import paras
-import model 
+import layers
+from torch import device, cuda
+DEVICE = device('cuda' if cuda.is_available()  else 'cpu')
+
 
 class FTNN(nn.Module):
 
-  def __init__(self, in_channels = paras.IN_CHANNELS, classes=paras.NUM_CLASSES, layers=model.simple_net, classifer = nn.LazyLinear(paras.NUM_CLASSES)):
+  def __init__(self, in_channels = paras.IN_CHANNELS, classes=paras.NUM_CLASSES, layers=layers.simple_net, classifer = nn.LazyLinear(paras.NUM_CLASSES)):
       super(FTNN, self).__init__()
 
       self.classifer = classifer
 
       self.additional_layers = layers # layers to be added into our model one at a time
-      self.layers = []
-      self.frozen_layers = []
+      self.layers = nn.ModuleList([])
+      self.frozen_layers = nn.ModuleList([])
       self.classes = classes
 
   def forward(self, x):
@@ -32,7 +35,7 @@ class FTNN(nn.Module):
 
 class Train():
 
-  def __init__(self,  train_loader, test_loader, backpropgate = False, model=FTNN().to(paras.device), lr=paras.LEARNING_RATE, num_epochs=paras.NUM_EPOCHS):
+  def __init__(self,  train_loader, test_loader, backpropgate = False, model=FTNN().to(DEVICE), lr=paras.LEARNING_RATE, num_epochs=paras.NUM_EPOCHS):
     self.model = model
     self.train_loader = train_loader
     self.test_loader = test_loader
@@ -53,8 +56,8 @@ class Train():
 
     for epoch in range(self.num_epochs):
       for i, (images, labels) in enumerate(self.train_loader):
-
-        labels = labels.to(paras.device)
+        images = images.to(DEVICE)
+        labels = labels.to(DEVICE)
 
         # forward pass
         outputs = self.model(images)
@@ -74,8 +77,8 @@ class Train():
       n_correct = 0
       n_samples = 0
       for images, labels in self.test_loader:
-        image = images.to(para.device)
-        labels = labels.to(paras.device)
+        images = images.to(DEVICE)
+        labels = labels.to(DEVICE)
         outputs = self.model(images)
 
         # max returns (value, maximum index value)
@@ -97,13 +100,15 @@ class Train():
       self.model.layers = self.model.additional_layers
     
     else:
+      
+      N = len(self.model.additional_layers)
 
-      while (len(self.model.additional_layers) > 0):
-        layer = self.model.additional_layers.pop(0) # incoming new layer
+      for i in range(N):
+        layer = self.model.additional_layers[i] # incoming new layer
         # 1. Add new layer to model
         self.model.layers.append(layer)
         # 2. diregarded output as output layer is retrained with every new added layer
-        self.model.classifer = nn.LazyLinear(out_features=self.model.classes)
+        self.model.classifer = nn.LazyLinear(out_features=self.model.classes).to(DEVICE)
         # 3. Train
         self.train_()
         # 4. Get Accuracy
@@ -111,14 +116,14 @@ class Train():
         # 5. As we have trained add layer to the frozen_layers
         self.model.frozen_layers.append(self.model.layers[-1])
         # 6. Freeze layers
-        self.freeze_layers_() 
+        self.freeze_layers_()  
       
 
     if len(self.model.additional_layers) < 0:
       pass
 
 train_loader, test_loader = datasets.CIFAR_100()
-model = Train(train_loader, test_loader, model = FTNN(classifer = nn.BatchNorm1d(paras.NUM_CLASSES).to(paras.device)))
-model.add_layers()
+train = Train(train_loader, test_loader)
+train.add_layers()
 
     
