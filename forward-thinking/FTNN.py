@@ -50,7 +50,7 @@ class Train():
     specific_params_to_be_optimized = [{'params': self.model.layers[-1].parameters()},
                                 {'params': self.model.classifer.parameters()}]
                                 
-    optimizer = torch.optim.Adam(specific_params_to_be_optimized, lr=self.lr)
+    optimizer = torch.optim.SGD(specific_params_to_be_optimized, lr=self.lr, momentum=0.5)
 
     n_total_steps = len(self.train_loader)
 
