@@ -122,7 +122,7 @@ class Train():
       # 1. Add new layer to model
       self.model.layers.append(layer)
       # 2. diregarded output as output layer is retrained with every new added layer
-      self.model.l2 = nn.Linear(layer.out_features, 10)
+      self.model.l2 = nn.Linear(layer.out_features, 10) #nn.LazyLinear(10)
       # 3. Train
       self.train_()
       # 4. Get Accuracy
