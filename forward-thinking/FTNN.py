@@ -8,10 +8,10 @@ import model
 
 class FTNN(nn.Module):
 
-  def __init__(self, in_channels = paras.IN_CHANNELS, classes=paras.NUM_CLASSES, layers=model.simple_net):
+  def __init__(self, in_channels = paras.IN_CHANNELS, classes=paras.NUM_CLASSES, layers=model.simple_net, classifer = nn.LazyLinear(paras.NUM_CLASSES)):
       super(FTNN, self).__init__()
 
-      self.classifer = nn.LazyLinear(classes)
+      self.classifer = classifer
 
       self.additional_layers = layers # layers to be added into our model one at a time
       self.layers = []
@@ -19,7 +19,6 @@ class FTNN(nn.Module):
       self.classes = classes
 
   def forward(self, x):
-    
 
     for l in self.layers:
       x = l(x)
@@ -75,6 +74,7 @@ class Train():
       n_correct = 0
       n_samples = 0
       for images, labels in self.test_loader:
+        image = images.to(para.device)
         labels = labels.to(paras.device)
         outputs = self.model(images)
 
@@ -118,7 +118,7 @@ class Train():
       pass
 
 train_loader, test_loader = datasets.CIFAR_100()
-model = Train(train_loader, test_loader)
+model = Train(train_loader, test_loader, model = FTNN(classifer = nn.BatchNorm1d(paras.NUM_CLASSES).to(paras.device)))
 model.add_layers()
 
     
