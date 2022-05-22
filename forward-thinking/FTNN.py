@@ -122,7 +122,7 @@ class Train():
     if len(self.model.additional_layers) < 0:
       pass
 
-train_loader, test_loader = datasets.CIFAR_100()
+train_loader, test_loader = datasets.CIFAR_10()
 train = Train(train_loader, test_loader)
 train.add_layers()
 
