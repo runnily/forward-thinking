@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import datasets
 import paras
 import layers
+from torch.optim.lr_scheduler import MultiStepLR
 from torch import device, cuda
 DEVICE = device('cuda' if cuda.is_available()  else 'cpu')
 
@@ -30,7 +31,6 @@ class FTNN(nn.Module):
     
     x = F.max_pool2d(x, kernel_size=x.size()[2:]) # optional global max pool
     x = F.dropout2d(x, 0.1, training=True) # optional can be removed 
-    
     x = x.reshape(x.shape[0], -1) # flatten to go into the linear hidden layer
     x = self.h0(x)
     x = self.classifer(x)
@@ -46,6 +46,9 @@ class Train():
     self.num_epochs = num_epochs
     self.backpropgate = backpropgate
 
+
+  def optimizer_(self, parameters_to_be_optimized):
+    return torch.optim.Adadelta(parameters_to_be_optimized, lr=self.lr, rho=0.9, eps=1e-3, weight_decay=0.001)
   
   def train_(self):
 
@@ -53,9 +56,16 @@ class Train():
     specific_params_to_be_optimized = [{'params': self.model.layers[-1].parameters()},
                                 {'params': self.model.classifer.parameters()}]
                                 
-    optimizer = torch.optim.SGD(specific_params_to_be_optimized, lr=self.lr, momentum=0.5)
+    optimizer = self.optimizer_(specific_params_to_be_optimized )
+    scheduler = MultiStepLR(optimizer, milestones=[100, 190, 306, 390, 440, 540], gamma=0.1)
 
     n_total_steps = len(self.train_loader)
+
+    # model.train() tells your model that you are training the model.
+    # So effectively layers like dropout, batchnorm etc. 
+    # which behave different on the train and test procedures 
+    # know what is going on and hence can behave accordingly.
+    self.model.train()
 
     for epoch in range(self.num_epochs):
       for i, (images, labels) in enumerate(self.train_loader):
@@ -70,10 +80,13 @@ class Train():
         optimizer.zero_grad() # clears old gradients from the last step (otherwise you’d just accumulate the gradients from all backward() calls
         loss.backward() #  computes the derivative of the loss w.r.t. the parameters (or anything requiring gradients) using backpropagation.
         optimizer.step() # causes the optimizer to take a step based on the gradients of the parameters.
-        
+        scheduler.step()
+
         if (i+1) % 100 == 0:
            print("Epoch [{}/{}], Step [{}/{}], Loss: {:.2f}".format(epoch+1,self.num_epochs,i+1,n_total_steps,loss.item()))
       #print("Epoch {} and Loss: {}".format(epoch, loss.item()))
+
+    self.model.eval()
         
   def test_(self):
     with torch.no_grad():
