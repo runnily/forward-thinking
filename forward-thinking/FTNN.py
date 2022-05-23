@@ -11,10 +11,11 @@ DEVICE = device('cuda' if cuda.is_available()  else 'cpu')
 
 class FTNN(nn.Module):
 
-  def __init__(self, in_channels = paras.IN_CHANNELS, classes=paras.NUM_CLASSES, layers=layers.simple_net, classifer = nn.LazyLinear(paras.NUM_CLASSES)):
+  def __init__(self, in_channels = paras.IN_CHANNELS, classes=paras.NUM_CLASSES, layers=layers.simple_net):
       super(FTNN, self).__init__()
 
-      self.classifer = classifer
+      self.h0 = nn.LazyLinear(256)
+      self.classifer = nn.Linear(256, classes)
 
       self.additional_layers = layers # layers to be added into our model one at a time
       self.layers = nn.ModuleList([])
@@ -26,8 +27,10 @@ class FTNN(nn.Module):
     for l in self.layers:
       x = l(x)
 
+    
     x = F.max_pool2d(x, kernel_size=x.size()[2:]) # optional global max pool
     x = F.dropout2d(x, 0.1, training=True) # optional can be removed 
+    x = self.h0(x)
 
     x = x.reshape(x.shape[0], -1)
     x = self.classifer(x)
@@ -98,6 +101,8 @@ class Train():
 
     if self.backpropgate == True:
       self.model.layers = self.model.additional_layers
+      self.train_()
+      self.test_()
     
     else:
       
@@ -108,7 +113,7 @@ class Train():
         # 1. Add new layer to model
         self.model.layers.append(layer)
         # 2. diregarded output as output layer is retrained with every new added layer
-        self.model.classifer = nn.LazyLinear(out_features=self.model.classes).to(DEVICE)
+        self.model.h0 = nn.LazyLinear(out_features=self.model.classes).to(DEVICE)
         # 3. Train
         self.train_()
         # 4. Get Accuracy
