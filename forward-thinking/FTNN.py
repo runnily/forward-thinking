@@ -1,11 +1,9 @@
-from os import X_OK
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import datasets
 import paras
 import layers
-from torch.optim.lr_scheduler import MultiStepLR
 from torch import device, cuda
 DEVICE = device('cuda' if cuda.is_available()  else 'cpu')
 
@@ -31,10 +29,11 @@ class FTNN(nn.Module):
 
     #x = F.max_pool2d(x, kernel_size=x.size()[2:]) 
     #x = F.dropout2d(x, 0.1, training=True)
+
     x = x.reshape(x.shape[0], -1) # flatten to go into the linear hidden layer
 
     x = self.h0(x)
-    #x = self.classifer(x)
+    x = self.classifer(x)
     return x
 
 class Net(nn.Module):
@@ -111,7 +110,7 @@ class Train():
 
           # print statistics
           running_loss += loss.item()
-          if i % 2000 == 1999:
+          if (i+1) % 100 == 0:
             print("Epoch [{}/{}], Step [{}/{}], Loss: {:.2f}".format(epoch+1,self.num_epochs,i+1,n_total_steps,loss.item()))
     
     self.model.eval()
@@ -169,7 +168,6 @@ class Train():
 
 train_loader, test_loader = datasets.CIFAR_10()
 train = Train(train_loader, test_loader, backpropgate = True)
-train.train_()
-train.test_()
+train.add_layers()
 
     
