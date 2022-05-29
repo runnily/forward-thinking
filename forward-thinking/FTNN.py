@@ -28,13 +28,33 @@ class FTNN(nn.Module):
     for l in self.layers:
       x = l(x)
     
-    x = F.max_pool2d(x, kernel_size=x.size()[2:]) 
+
+    #x = F.max_pool2d(x, kernel_size=x.size()[2:]) 
+    #x = F.dropout2d(x, 0.1, training=True)
     x = x.reshape(x.shape[0], -1) # flatten to go into the linear hidden layer
+
     x = self.h0(x)
-    x = self.classifer(x)
+    #x = self.classifer(x)
     return x
 
-  
+class Net(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(3, 6, 5)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.conv2 = nn.Conv2d(6, 16, 5)
+        self.fc1 = nn.Linear(16 * 5 * 5, 120)
+        self.fc2 = nn.Linear(120, 84)
+        self.fc3 = nn.Linear(84, 10)
+
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = torch.flatten(x, 1) # flatten all dimensions except batch
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
 
 class Train():
 
@@ -48,23 +68,22 @@ class Train():
 
 
   def optimizer_(self, parameters_to_be_optimized):
-    return torch.optim.Adam(parameters_to_be_optimized, lr=self.lr)
-    #return torch.optim.Adadelta(parameters_to_be_optimized, lr=self.lr, rho=0.9, eps=1e-3, weight_decay=0.001)
+    return torch.optim.SGD(parameters_to_be_optimized, lr=self.lr, momentum=0.9)
+    #return torch.optim.Adam(parameters_to_be_optimized, lr=self.lr, rho=0.9, eps=1e-3, weight_decay=0.001)
   
   def train_(self):
 
-    criterion = nn.CrossEntropyLoss()
     specific_params_to_be_optimized = []
     if self.backpropgate == True:
       specific_params_to_be_optimized = self.model.parameters()
     else: 
       specific_params_to_be_optimized = [{'params': self.model.layers[-1].parameters()},
                                 {'params': self.model.classifer.parameters()}, {'params': self.model.h1.parameters()}]
+    
+    n_total_steps = len(self.train_loader)
                                 
     optimizer = self.optimizer_(specific_params_to_be_optimized )
-    scheduler = MultiStepLR(optimizer, milestones=[100, 190, 306, 390, 440, 540], gamma=0.1)
-
-    n_total_steps = len(self.train_loader)
+    criterion = nn.CrossEntropyLoss()
 
     # model.train() tells your model that you are training the model.
     # So effectively layers like dropout, batchnorm etc. 
@@ -72,25 +91,29 @@ class Train():
     # know what is going on and hence can behave accordingly.
     self.model.train()
 
-    for epoch in range(self.num_epochs):
-      for i, (images, labels) in enumerate(self.train_loader):
-        images = images.to(DEVICE)
-        labels = labels.to(DEVICE)
+    for epoch in range(self.num_epochs):  # loop over the dataset multiple times
 
-        # forward pass
-        outputs = self.model(images)
-        loss = criterion(outputs, labels)
+      running_loss = 0.0
+      for i, data in enumerate(self.train_loader, 0):
+          # get the inputs; data is a list of [inputs, labels]
+          inputs, labels = data
+          inputs = inputs.to(DEVICE)
+          labels = labels.to(DEVICE)
 
-        # Backwards and optimize
-        optimizer.zero_grad() # clears old gradients from the last step (otherwise you’d just accumulate the gradients from all backward() calls
-        loss.backward() #  computes the derivative of the loss w.r.t. the parameters (or anything requiring gradients) using backpropagation.
-        optimizer.step() # causes the optimizer to take a step based on the gradients of the parameters.
-        scheduler.step()
+          # zero the parameter gradients
+          optimizer.zero_grad()
 
-        if (i+1) % 100 == 0:
-           print("Epoch [{}/{}], Step [{}/{}], Loss: {:.2f}".format(epoch+1,self.num_epochs,i+1,n_total_steps,loss.item()))
-      #print("Epoch {} and Loss: {}".format(epoch, loss.item()))
+          # forward + backward + optimize
+          outputs = self.model(inputs)
+          loss = criterion(outputs, labels)
+          loss.backward()
+          optimizer.step()
 
+          # print statistics
+          running_loss += loss.item()
+          if i % 2000 == 1999:
+            print("Epoch [{}/{}], Step [{}/{}], Loss: {:.2f}".format(epoch+1,self.num_epochs,i+1,n_total_steps,loss.item()))
+    
     self.model.eval()
         
   def test_(self):
@@ -146,6 +169,7 @@ class Train():
 
 train_loader, test_loader = datasets.CIFAR_10()
 train = Train(train_loader, test_loader, backpropgate = True)
-train.add_layers()
+train.train_()
+train.test_()
 
     
