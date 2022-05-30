@@ -6,7 +6,7 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available()  else 'cpu')
 
 
 class FTNN(nn.Module):
-  def __init__(self, in_channels = utils.IN_CHANNELS, classes=utils.NUM_CLASSES, layers=utils.simple_net, hidden_layer_features = utils.HIDDEN_SIZE):
+  def __init__(self, in_channels = utils.in_channels, classes=utils.num_classes, layers=utils.simple_net, hidden_layer_features = utils.hidden_size):
       super(FTNN, self).__init__()
 
       self.h0 = nn.LazyLinear(hidden_layer_features)
@@ -35,7 +35,7 @@ class FTNN(nn.Module):
 
 class FNN(nn.Module):
 
-  def __init__(self, input_size=utils.INPUT_SIZE, num_classes=utils.NUM_CLASSES, initial_hidden_size = utils.HIDDEN_SIZE, layers=utils.dense_net):
+  def __init__(self, input_size=utils.input_size, num_classes=utils.num_classes, initial_hidden_size = utils.hidden_size, layers=utils.dense_net):
     super(FNN, self).__init__()
     self.additional_layers = layers # layers to be added into our model one at a time
     self.l2 = nn.Linear(initial_hidden_size, num_classes)
@@ -43,7 +43,7 @@ class FNN(nn.Module):
     self.frozen_layers = nn.ModuleList([])
 
   def forward(self, x):
-    out = x.reshape(-1, utils.INPUT_SIZE).to(DEVICE)
+    out = x.reshape(-1, utils.input_size).to(DEVICE)
     for l in self.layers:
       out = l(out)
       #out = relu(out)
@@ -52,7 +52,7 @@ class FNN(nn.Module):
 
 class Train():
 
-  def __init__(self,  train_loader, test_loader, backpropgate = False, model=FTNN().to(DEVICE), lr=utils.LEARNING_RATE, num_epochs=utils.NUM_EPOCHS):
+  def __init__(self,  train_loader, test_loader, backpropgate = False, model=FTNN().to(DEVICE), lr=utils.learning_rate, num_epochs=utils.num_epochs):
     self.model = model
     self.train_loader = train_loader
     self.test_loader = test_loader
@@ -179,7 +179,7 @@ class Train():
         self.model.frozen_layers.append(self.model.layers[-1])
         # 6. Freeze layers
         self.freeze_layers_() 
-      
+        
     # This part is to train the last layers
     if len(self.model.additional_layers) < 0:
       for i in range(len(self.model.last_layers)):

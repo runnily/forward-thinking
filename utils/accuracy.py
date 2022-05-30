@@ -39,7 +39,7 @@ class Measure():
   def __call__(self, time_elapsed, epoch, loss, test_accuracy, train_accuracy):
       if self.init:
         self.__clear()
-      return self.getDict()
+      return self.recordAccuracy(time_elapsed, epoch, loss, test_accuracy, train_accuracy)
 
   def getDict(self):
     return self.__dict_vals

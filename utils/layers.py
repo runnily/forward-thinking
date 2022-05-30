@@ -1,8 +1,8 @@
 import torch.nn as nn
-from .paras import IN_CHANNELS, INPUT_SIZE
+from .paras import in_channels, input_size
 
 basic_net = nn.ModuleList([
-    nn.Conv2d(in_channels=IN_CHANNELS, out_channels=128, kernel_size=3, stride=1, padding=1, bias=False),
+    nn.Conv2d(in_channels=in_channels, out_channels=128, kernel_size=3, stride=1, padding=1, bias=False),
     nn.ReLU(),
 		nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1, bias=False),
     nn.ReLU(),
@@ -21,7 +21,7 @@ basic_net = nn.ModuleList([
 simple_net = nn.ModuleList([
 
   # 1st layer
-  nn.Conv2d(IN_CHANNELS, 64, kernel_size=[3, 3], stride=(1, 1), padding=(1, 1)),
+  nn.Conv2d(in_channels, 64, kernel_size=[3, 3], stride=(1, 1), padding=(1, 1)),
   nn.BatchNorm2d(64, eps=1e-05, momentum=0.05, affine=True),
   nn.ReLU(inplace=True),
 
@@ -98,7 +98,7 @@ simple_net = nn.ModuleList([
 ])
 
 dense_net = additional_layers = [
-            nn.Linear(INPUT_SIZE, 150),
+            nn.Linear(input_size, 150),
             nn.Linear(150, 100),
             nn.Linear(100, 50),
             nn.Linear(50, 10),]
