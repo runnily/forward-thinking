@@ -180,13 +180,14 @@ class Train():
         # 6. Freeze layers
         self.freeze_layers_() 
         
+
     # This part is to train the last layers
     if len(self.model.additional_layers) < 0:
       for i in range(len(self.model.last_layers)):
         self.__train(self.model.last_layers.parameters())
 
 if __name__ == "__main__":
-  train_loader, test_loader = utils.CIFAR_10()
+  train_loader, test_loader = utils.SVHN()
   train = Train(train_loader, test_loader)
   train.add_layers()
   train.recordAccuracy.save()
