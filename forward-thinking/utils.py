@@ -19,10 +19,10 @@ class Measure():
   def __str__(self):
     title = ["Epoch", "Time Elapsed", "Loss", "Train accuracy", "Test accuracy"]
     string = ""
-    row_format = "{:15}" * (len(title) + 1) 
-    string += row_format.format("", *title)
+    #row_format = "{:15}" * (len(title) + 1) 
+    #string += row_format.format("", *title) 
     for num, row in zip(title, self.__vals):
-        string += row_format.format(num, *row)
+        string += "\n |{:>3}|{:>20}|".format(num, *row)
     return string
 
   def __call__(self, time_elapsed, epoch, loss, test_accuracy, train_accuracy):
