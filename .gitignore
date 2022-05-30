@@ -142,4 +142,6 @@ forward-thinking/data/
 #file types
 *.csv
 
+# google colab
+sample_data/
 
