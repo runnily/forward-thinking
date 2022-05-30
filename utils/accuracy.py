@@ -21,6 +21,7 @@ class Measure():
       self.test_accuracy.append(test_accuracy)
       self.train_accuracy.append(train_accuracy)
       self.init = True
+      return self.getDict()
 
   def __str__(self):
     title = ["Epoch", "Time Elapsed", "Loss", "Train accuracy", "Test accuracy"]
@@ -38,8 +39,10 @@ class Measure():
   def __call__(self, time_elapsed, epoch, loss, test_accuracy, train_accuracy):
       if self.init:
         self.__clear()
-      self.recordAccuracy(time_elapsed, epoch, loss, test_accuracy, train_accuracy)
+      return self.getDict()
 
+  def getDict(self):
+    return self.__dict_vals
   
   def save(self, filename="accuracy.csv"):
     try:

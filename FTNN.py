@@ -24,8 +24,8 @@ class FTNN(nn.Module):
       x = l(x)
     
 
-    x = F.max_pool2d(x, kernel_size=x.size()[2:]) 
-    x = F.dropout2d(x, 0.1, training=True)
+    #x = F.max_pool2d(x, kernel_size=x.size()[2:]) 
+    #x = F.dropout2d(x, 0.1, training=True)
 
     x = x.reshape(x.shape[0], -1) # flatten to go into the linear hidden layer
 
@@ -179,7 +179,6 @@ class Train():
         self.model.frozen_layers.append(self.model.layers[-1])
         # 6. Freeze layers
         self.freeze_layers_() 
-        break 
       
     # This part is to train the last layers
     if len(self.model.additional_layers) < 0:
