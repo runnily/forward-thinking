@@ -67,8 +67,9 @@ class Train():
     #return torch.optim.Adam(parameters_to_be_optimized, lr=self.lr, rho=0.9, eps=1e-3, weight_decay=0.001)
 
   def __accuracy(self, predictions, labels):
-    classes = torch.argmax(predictions, dim=1)
-    return torch.mean((classes == labels).float()) # needs mean for match size
+    # https://stackoverflow.com/questions/61696593/accuracy-for-every-epoch-in-pytorch
+    classes = torch.argmax(predictions, dim=1) 
+    return torch.mean((classes == labels).float()) # needs mean for each batch size
   
   def __train(self, specific_params_to_be_optimized):
 
@@ -94,6 +95,7 @@ class Train():
 
       running_loss = 0.00
       running_accuracy = 0.00
+      running_time = 0.00
       start = torch.cuda.Event(enable_timing=True)
       start.record()
       for i, data in enumerate(self.train_loader, 0): # looping over every batch
@@ -125,7 +127,8 @@ class Train():
       len_self_loader = len(self.train_loader)
       running_accuracy /= len_self_loader
       running_loss /= len_self_loader
-      self.recordAccuracy(start.elapsed_time(end), epoch, running_loss, test_accuracy, running_accuracy)
+      running_time += start.elapsed_time(end) # https://discuss.pytorch.org/t/how-to-measure-time-in-pytorch/26964
+      self.recordAccuracy(running_time, epoch, running_loss, test_accuracy, running_accuracy.item())
 
         
   def __test(self):
@@ -176,7 +179,6 @@ class Train():
         self.model.frozen_layers.append(self.model.layers[-1])
         # 6. Freeze layers
         self.freeze_layers_() 
-        print(self.recordAccuracy)
         break 
       
     # This part is to train the last layers
@@ -188,5 +190,6 @@ if __name__ == "__main__":
   train_loader, test_loader = utils.CIFAR_10()
   train = Train(train_loader, test_loader)
   train.add_layers()
-
+  train.recordAccuracy.save()
+  
     
