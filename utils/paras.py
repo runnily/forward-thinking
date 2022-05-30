@@ -1,12 +1,12 @@
 
 
 input_size = 784 
-hidden_size = 10
+hidden_size = 512
 num_classes = 10
-num_epochs = 2
+num_epochs = 5
 batch_size = 128
 in_channels = 3 #1
-learning_rate = 0.001
+learning_rate = 0.01
 
 paras = {input_size : input_size, hidden_size: hidden_size, num_classes : num_classes,
           num_epochs : num_epochs, batch_size : batch_size, in_channels : in_channels,
