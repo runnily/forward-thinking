@@ -72,14 +72,7 @@ class Train():
     return torch.mean((classes == labels).float()) # needs mean for each batch size
   
   def __train(self, specific_params_to_be_optimized):
-
   
-    if self.backpropgate == True:
-      specific_params_to_be_optimized = self.model.parameters()
-    else: 
-      specific_params_to_be_optimized = [{'params': self.model.layers[-1].parameters()},
-                                {'params': self.model.classifer.parameters()}, {'params': self.model.h0.parameters()}]
-    
     n_total_steps = len(self.train_loader)
                                 
     optimizer = self.optimizer_(specific_params_to_be_optimized )
@@ -158,8 +151,8 @@ class Train():
   def add_layers(self):
 
     if self.backpropgate == True:
-      self.model.layers = self.model.additional_layers
-      self.__train()
+      #self.model.layers = self.model.additional_layers
+      self.__train(self.model.parameters())
     
     else:
       N = len(self.model.additional_layers)
