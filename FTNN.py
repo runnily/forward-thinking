@@ -15,7 +15,7 @@ class FTNN(nn.Module):
       self.additional_layers = layers # layers to be added into our model one at a time
       self.layers = nn.ModuleList([])
       self.frozen_layers = nn.ModuleList([])
-      self.last_layers = nn.ModuleList([self.h0, self.classifer])
+      self.last_layers = nn.ModuleList([self.h0])
       self.classes = classes
 
   def forward(self, x):
@@ -160,21 +160,19 @@ class Train():
         # 1. Add new layer to model
         self.model.layers.append(layer)
         # 2. diregarded output as output layer is retrained with every new added layer
-        self.model.h0 = nn.LazyLinear(out_features=self.model.hidden_layer_features).to(DEVICE)
+        self.model.h0 = nn.LazyLinear(out_features=self.model.classes).to(DEVICE)
         # 3. defining parameters to be optimized
-        specific_params_to_be_optimized = [{'params': self.model.layers[-1].parameters()},
-                                {'params': self.model.classifer.parameters()}, {'params': self.model.h0.parameters()}]
+        specific_params_to_be_optimized = [{'params': self.model.layers[-1].parameters()}, {'params': self.model.h0.parameters()}]
         # 4. Train 
         self.__train(specific_params_to_be_optimized)
         # 5. As we have trained add layer to the frozen_layers
         self.model.frozen_layers.append(self.model.layers[-1])
         # 6. Freeze layers
         self.freeze_layers_()
-        self.__test()
         
 
     # This part is to train the last layers
-    if len(self.model.additional_layers) < 0:
+    if len(self.model.additional_layers) == len(self.model.additional_layers) and self.backpropgate==False:
       for i in range(len(self.model.last_layers)):
         self.__train(self.model.last_layers.parameters())
 
