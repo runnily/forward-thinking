@@ -10,13 +10,12 @@ class SimpleNetFTNN(nn.Module):
   def __init__(self, in_channels = utils.in_channels, classes=utils.num_classes, layers=utils.simple_net, hidden_layer_features = utils.hidden_size):
       super(SimpleNetFTNN, self).__init__()
 
-      self.h0 = nn.LazyLinear(hidden_layer_features)
-      self.classifer = nn.Linear(hidden_layer_features, classes)
+      self.classifer = nn.LazyLinear(classes)
       self.hidden_layer_features = hidden_layer_features
       self.additional_layers = layers # layers to be added into our model one at a time
-      self.layers = nn.ModuleList([])
+      self.layers = nn.ModuleList([]) # currently module has no layers -except classifer
       self.frozen_layers = nn.ModuleList([])
-      self.last_layers = nn.ModuleList([self.h0])
+      self.last_layers = nn.ModuleList([self.classifer])
       self.classes = classes
 
   def forward(self, x):
@@ -35,8 +34,7 @@ class SimpleNetFTNN(nn.Module):
     
     x = x.reshape(x.shape[0], -1) # flatten to go into the linear hidden layer
 
-    x = self.h0(x)
-    #x = self.classifer(x)
+    x = self.classifer(x)
     return x
 
 class FNN(nn.Module):
@@ -78,8 +76,8 @@ class Train():
     classes = torch.argmax(predictions, dim=1) 
     return torch.mean((classes == labels).float()) # needs mean for each batch size
   
-  def __train(self, specific_params_to_be_optimized):
-  
+  def __train(self, specific_params_to_be_optimized, num_epochs):
+
     n_total_steps = len(self.train_loader)
                                 
     optimizer = self.optimizer_(specific_params_to_be_optimized )
@@ -91,7 +89,7 @@ class Train():
     # know what is going on and hence can behave accordingly.
     self.model.train()
 
-    for epoch in range(self.num_epochs):  # loop over the dataset multiple times
+    for epoch in range(num_epochs):  # loop over the dataset multiple times
 
       running_loss = 0.00
       running_accuracy = 0.00
@@ -116,7 +114,7 @@ class Train():
           # print statistics
           running_loss += loss.item()
           if (i+1) % 100 == 0:
-            print("Epoch [{}/{}], Step [{}/{}], Loss: {:.2f}".format(epoch+1,self.num_epochs,i+1,n_total_steps,loss.item()))
+            print("Epoch [{}/{}], Step [{}/{}], Loss: {:.2f}".format(epoch+1,num_epochs,i+1,n_total_steps,loss.item()))
       end = torch.cuda.Event(enable_timing=True)
       end.record()
 
@@ -155,40 +153,51 @@ class Train():
       for l in self.model.frozen_layers:
         l.requires_grad_(False)
 
-  def add_layers(self):
+  def __getEpochforLayer(self, layer_key, change_epochs_each_layer = False, epochs_each_layer={}):
+    if change_epochs_each_layer:
+      try:
+        return int(input("Number of epoch for {} ".format(layer_key)))
+      except:
+        pass
+    return epochs_each_layer.get(layer_key,  self.num_epochs)
+
+
+  def add_layers(self, change_epochs_each_layer = False, epochs_each_layer={}):
+
+    N = len(self.model.additional_layers)
 
     if self.backpropgate == True:
       self.model.layers = self.model.additional_layers
-      self.__train(self.model.parameters())
-    
+      self.__train(self.model.parameters(), self.num_epochs)
+   
     else:
-      N = len(self.model.additional_layers)
-
+      
       for i in range(N):
         layer = self.model.additional_layers[i] # incoming new layer
         # 1. Add new layer to model
         self.model.layers.append(layer)
         # 2. diregarded output as output layer is retrained with every new added layer
-        self.model.h0 = nn.LazyLinear(out_features=self.model.classes).to(DEVICE)
+        self.model.classifer = nn.LazyLinear(out_features=self.model.classes).to(DEVICE)
         # 3. defining parameters to be optimized
-        specific_params_to_be_optimized = [{'params': self.model.layers[-1].parameters()}, {'params': self.model.h0.parameters()}]
+        specific_params_to_be_optimized = [{'params': self.model.layers[-1].parameters()}, {'params': self.model.classifer.parameters()}]
         # 4. Train 
-        self.__train(specific_params_to_be_optimized)
+        num_epochs = self.__getEpochforLayer(i, change_epochs_each_layer, epochs_each_layer)
+        self.__train(specific_params_to_be_optimized, num_epochs = num_epochs)
         # 5. As we have trained add layer to the frozen_layers
         self.model.frozen_layers.append(self.model.layers[-1])
         # 6. Freeze layers
         self.freeze_layers_()
-        
 
     # This part is to train the last layers
     if len(self.model.additional_layers) == len(self.model.additional_layers) and self.backpropgate==False:
       for i in range(len(self.model.last_layers)):
-        self.__train(self.model.last_layers.parameters())
+        num_epochs = self.__getEpochforLayer(N+1, change_epochs_each_layer, epochs_each_layer)
+        self.__train(self.model.last_layers.parameters(), num_epochs = num_epochs)
 
 if __name__ == "__main__":
   train_loader, test_loader = utils.CIFAR_10()
   train = Train(train_loader, test_loader)
-  train.add_layers()
+  train.add_layers(change_epochs_each_layer=True)
   train.recordAccuracy.save()
   
     
