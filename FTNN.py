@@ -5,9 +5,10 @@ import utils
 DEVICE = torch.device('cuda' if torch.cuda.is_available()  else 'cpu')
 
 
-class FTNN(nn.Module):
+
+class SimpleNetFTNN(nn.Module):
   def __init__(self, in_channels = utils.in_channels, classes=utils.num_classes, layers=utils.simple_net, hidden_layer_features = utils.hidden_size):
-      super(FTNN, self).__init__()
+      super(SimpleNetFTNN, self).__init__()
 
       self.h0 = nn.LazyLinear(hidden_layer_features)
       self.classifer = nn.Linear(hidden_layer_features, classes)
@@ -20,11 +21,18 @@ class FTNN(nn.Module):
 
   def forward(self, x):
 
-    for l in self.layers:
-      x = l(x)
-
-    x = F.max_pool2d(x, kernel_size=x.size()[2:]) 
-    x = F.dropout2d(x, 0.1, training=True)
+    for i in range(len(self.layers)):
+      if i % 2 == 0: # every batch layer is on the eventh index (i) so only apply relu here
+        x = F.relu(self.layers[i](x), inplace=True) 
+        if i in [8, 14, 18, 20]: # simple net applies this on the following layers
+          x = F.max_pool2d(x, kernel_size = (2, 2), stride = (2, 2), dilation = (1, 1), ceil_mode = False)
+          x = F.dropout2d(x, p=0.1)
+        if i == 26: # on the last layer
+          x = F.max_pool2d(x, kernel_size=x.size()[2:]) 
+          x = F.dropout2d(x, 0.1, training=True)
+      else:
+        x = self.layers[i](x)
+    
     x = x.reshape(x.shape[0], -1) # flatten to go into the linear hidden layer
 
     x = self.h0(x)
@@ -50,7 +58,7 @@ class FNN(nn.Module):
 
 class Train():
 
-  def __init__(self,  train_loader, test_loader, backpropgate = False, model=FTNN().to(DEVICE), lr=utils.learning_rate, num_epochs=utils.num_epochs):
+  def __init__(self,  train_loader, test_loader, backpropgate = False, model=SimpleNetFTNN().to(DEVICE), lr=utils.learning_rate, num_epochs=utils.num_epochs):
     self.model = model
     self.train_loader = train_loader
     self.test_loader = test_loader
@@ -139,6 +147,7 @@ class Train():
 
     accuracy = n_correct / n_samples
     self.model.train()
+    print(accuracy)
     return accuracy
 
   def freeze_layers_(self):
@@ -178,7 +187,7 @@ class Train():
 
 if __name__ == "__main__":
   train_loader, test_loader = utils.CIFAR_10()
-  train = Train(train_loader, test_loader, backpropgate=True)
+  train = Train(train_loader, test_loader)
   train.add_layers()
   train.recordAccuracy.save()
   
