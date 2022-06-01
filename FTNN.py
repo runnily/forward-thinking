@@ -5,6 +5,27 @@ import utils
 DEVICE = torch.device('cuda' if torch.cuda.is_available()  else 'cpu')
 
 
+class BasicNNet(nn.Module):
+
+  def __init__(self, in_channels = utils.in_channels, classes=utils.num_classes, layers=utils.basic_net, hidden_layer_features = utils.hidden_size):
+      super(BasicNNet, self).__init__()
+
+      self.classifer = nn.LazyLinear(classes)
+      self.hidden_layer_features = hidden_layer_features
+      self.additional_layers = layers # layers to be added into our model one at a time
+      self.layers = nn.ModuleList([]) # currently module has no layers -except classifer
+      self.frozen_layers = nn.ModuleList([])
+      self.last_layers = nn.ModuleList([self.classifer])
+      self.classes = classes
+
+  
+  def forward(self, x):
+    for i in range(len(self.layers)):
+      x = F.relu(self.layers[i](x))
+    x = x.reshape(x.shape[0], -1) # flatten to go into the linear hidden layer
+    x = self.classifer(x)
+    return x
+  
 
 class SimpleNetFTNN(nn.Module):
   def __init__(self, in_channels = utils.in_channels, classes=utils.num_classes, layers=utils.simple_net, hidden_layer_features = utils.hidden_size):
@@ -20,17 +41,17 @@ class SimpleNetFTNN(nn.Module):
 
   def forward(self, x):
 
-    for i in range(len(self.layers)):
+    for i in range(1, len(self.layers)+1):
       if i % 2 == 0: # every batch layer is on the eventh index (i) so only apply relu here
-        x = F.relu(self.layers[i](x), inplace=True) 
-        if i in [8, 14, 18, 20]: # simple net applies this on the following layers
+        x = F.relu(self.layers[i-1](x), inplace=True) 
+        if i in [4*2, 7*2, 9*2, 20*2]: # simple net applies this on the following layers
           x = F.max_pool2d(x, kernel_size = (2, 2), stride = (2, 2), dilation = (1, 1), ceil_mode = False)
           x = F.dropout2d(x, p=0.1)
         if i == 26: # on the last layer
           x = F.max_pool2d(x, kernel_size=x.size()[2:]) 
           x = F.dropout2d(x, 0.1, training=True)
       else:
-        x = self.layers[i](x)
+        x = self.layers[i-1](x)
     
     x = x.reshape(x.shape[0], -1) # flatten to go into the linear hidden layer
 
@@ -191,13 +212,13 @@ class Train():
     # This part is to train the last layers
     if len(self.model.additional_layers) == len(self.model.additional_layers) and self.backpropgate==False:
       for i in range(len(self.model.last_layers)):
-        num_epochs = self.__getEpochforLayer(N+1, change_epochs_each_layer, epochs_each_layer)
-        self.__train(self.model.last_layers.parameters(), num_epochs = num_epochs)
+        num_epochs = self.__getEpochforLayer(N, change_epochs_each_layer, epochs_each_layer)
+        self.__train([{'params': self.model.classifer.parameters()}], num_epochs = num_epochs)
 
 if __name__ == "__main__":
-  train_loader, test_loader = utils.CIFAR_10()
-  train = Train(train_loader, test_loader)
-  train.add_layers(change_epochs_each_layer=True)
+  train_loader, test_loader = utils.SVHN()
+  train = Train(train_loader, test_loader, model = BasicNNet().to(DEVICE), backpropgate=True)
+  train.add_layers()
   train.recordAccuracy.save()
   
     

@@ -3,17 +3,11 @@ from .paras import in_channels, input_size
 
 basic_net = nn.ModuleList([
     nn.Conv2d(in_channels=in_channels, out_channels=128, kernel_size=3, stride=1, padding=1, bias=False),
-    nn.ReLU(),
 		nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1, bias=False),
-    nn.ReLU(),
 		nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1, bias=False),
-    nn.ReLU(),
 	  nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1, bias=False),
-    nn.ReLU(),
 		nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1, bias=False),
-    nn.ReLU(),
 		nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1, bias=False),
-		nn.ReLU(),
 		nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1, bias=False),]
 )
 
