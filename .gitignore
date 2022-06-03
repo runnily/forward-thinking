@@ -144,4 +144,5 @@ forward-thinking/data/
 
 # google colab
 sample_data/
+.config/
 
