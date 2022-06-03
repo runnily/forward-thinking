@@ -1,5 +1,4 @@
 from torch.functional import split
-from .paras import batch_size
 from torchvision.transforms import ToTensor, Normalize, Compose
 import torchvision
 import torch
@@ -44,7 +43,7 @@ def SVHN():
   return loaders(train_data, test_data)
 
 
-def loaders(train_data, test_data):
+def loaders(train_data, test_data, batch_size=128):
   train_loader = DataLoader(train_data, batch_size=batch_size,num_workers=2)
   test_loader = DataLoader(test_data, batch_size=batch_size,num_workers=2)
   return train_loader, test_loader
