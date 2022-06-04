@@ -8,11 +8,11 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available()  else 'cpu')
 input_size = 784 
 hidden_size = 512
 num_classes = 100
-num_epochs = 5
+num_epochs = 20
 batch_size = 128
 in_channels = 3 #1
 learning_rate = 0.01
-model = models.BasicNet(num_classes=num_classes).to(DEVICE)
+model = models.BasicNet(num_classes=num_classes, backpropgate=True).to(DEVICE)
 
 
 class Train():
