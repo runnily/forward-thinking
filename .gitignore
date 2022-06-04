@@ -141,6 +141,7 @@ forward-thinking/data/
 
 #file types
 *.csv
+!recorded-accuracy/*
 
 # google colab
 sample_data/
