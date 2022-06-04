@@ -8,23 +8,14 @@ import torch.nn.functional as F
 
 
 basicNet = nn.ModuleList([
-        nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, padding=1),
-        nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1),
+        nn.Conv2d(in_channels=3, out_channels=512, kernel_size=3, padding=1),
+        nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, padding=1),
         
-        nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1),
-        nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1),
+        nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, padding=1),
+        nn.Conv2d(in_channels=512, out_channels=256, kernel_size=3, padding=1),
         
-        nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, padding=1),
         nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, padding=1),
         nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, padding=1),
-        
-        nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, padding=1),
-        nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, padding=1),
-        nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, padding=1),
-        
-        nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, padding=1),
-        nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, padding=1),
-        nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, padding=1),
 ])
         #nn.Linear(25088, 4096),
         #nn.Linear(4096, 4096),
@@ -36,10 +27,13 @@ class BasicNet(BaseModel):
     super(BasicNet, self).__init__(basicNet, num_classes, backpropgate=backpropgate)
 
   def forward(self, x):
-    for i in range(1, len(self.current_layers)+1):
-      if i in [2, 4, 7, 10, 13]:
+    for i in range(len(self.current_layers)):
+      if i in [2, 4, 7, 10, 12]:
         x = F.max_pool2d(x, kernel_size=2, stride=2)
-      x = F.relu(self.current_layers[i-1](x))
+      x = F.relu(self.current_layers[i](x))
     x = x.view(x.size(0), -1)
     x = self.classifier(x)
     return x
+
+
+

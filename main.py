@@ -1,18 +1,18 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import utils
+import utils 
 import models
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available()  else 'cpu')
 input_size = 784 
 hidden_size = 512
-num_classes = 10
+num_classes = 100
 num_epochs = 5
 batch_size = 128
 in_channels = 3 #1
 learning_rate = 0.01
-model = models.BasicNet(backpropgate=True).to(DEVICE)
+model = models.BasicNet(num_classes=num_classes).to(DEVICE)
 
 
 class Train():
@@ -47,28 +47,26 @@ class Train():
     # So effectively layers like dropout, batchnorm etc. 
     # which behave different on the train and test procedures 
     # know what is going on and hence can behave accordingly.
-    self.model.train()
 
     for epoch in range(num_epochs):  # loop over the dataset multiple times
-
+      self.model.train()
       running_loss = 0.00
       running_accuracy = 0.00
       start = torch.cuda.Event(enable_timing=True)
       start.record()
-      for i, data in enumerate(self.train_loader, 0): # looping over every batch
+      for i, (images, labels) in enumerate(self.train_loader, 0): # looping over every batch
           # get the inputs; data is a list of [inputs, labels]
-          inputs, labels = data
-          inputs = inputs.to(DEVICE)
+         
+          images = images.to(DEVICE)
           labels = labels.to(DEVICE)
 
-          # zero the parameter gradients
-          optimizer.zero_grad()
+          outputs = self.model(images)
 
           # forward + backward + optimize
-          outputs = self.model(inputs)
+          optimizer.zero_grad() # zero the parameter gradients
           loss = criterion(outputs, labels)
-          loss.backward()
-          optimizer.step()
+          loss.backward() #  computes the derivative of the loss w.r.t. the parameters (or anything requiring gradients) using backpropagation.
+          optimizer.step() # causes the optimizer to take a step based on the gradients of the parameters.
 
           running_accuracy += self.__accuracy(outputs, labels)
           # print statistics
@@ -84,6 +82,7 @@ class Train():
       len_self_loader = len(self.train_loader)
       running_accuracy /= len_self_loader
       running_loss /= len_self_loader
+      print("Test accuracy: {}, Training accuracy: {}".format(test_accuracy, running_accuracy))
       self.__running_time += start.elapsed_time(end) # https://discuss.pytorch.org/t/how-to-measure-time-in-pytorch/26964
       self.recordAccuracy(self.__running_time, epoch, running_loss, test_accuracy, running_accuracy.item())
 
@@ -104,8 +103,6 @@ class Train():
         n_correct += (predicted == labels).sum().item() # gets the number of correct
 
     accuracy = n_correct / n_samples
-    self.model.train()
-    print(accuracy)
     return accuracy
 
   def freeze_layers_(self):
@@ -125,15 +122,18 @@ class Train():
   def add_layers(self, change_epochs_each_layer = False, epochs_each_layer={}):
 
     N = len(self.model.incoming_layers)
-    print(self.model.incoming_layers)
     if self.model.backpropgate == True:
       self.model.current_layers = self.model.incoming_layers
-      self.__train(self.model.parameters(), self.num_epochs)
+      print(self.model.current_layers)
+      params = [{'params': self.model.classifier.parameters()}]
+      for l in self.model.current_layers:
+        params.append({'params': l.parameters()})
+      self.__train(params, self.num_epochs)
    
     else:
-      
+      print(self.model.backpropgate)
+
       for i in range(N):
-        print(self.model.backpropgate)
         layer = self.model.incoming_layers[i] # incoming new layer
         # 1. Add new layer to model
         self.model.current_layers.append(layer)
@@ -158,9 +158,9 @@ class Train():
         self.__train([{'params': self.model.classifier.parameters()}], num_epochs = num_epochs)
 
 if __name__ == "__main__":
-  train_loader, test_loader = utils.CIFAR_10()
+  train_loader, test_loader = utils.CIFAR_100()
   train = Train(train_loader, test_loader)
   train.add_layers()
   train.recordAccuracy.save()
-  
-    
+
+ 
