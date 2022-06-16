@@ -44,6 +44,6 @@ def SVHN():
 
 
 def loaders(train_data, test_data, batch_size=128):
-  train_loader = DataLoader(train_data, batch_size=batch_size,num_workers=2)
-  test_loader = DataLoader(test_data, batch_size=batch_size,num_workers=2)
+  train_loader = DataLoader(train_data, batch_size=batch_size,num_workers=2, shuffle=True)
+  test_loader = DataLoader(test_data, batch_size=batch_size,num_workers=2, shuffle=True)
   return train_loader, test_loader
