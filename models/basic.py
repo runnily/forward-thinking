@@ -7,16 +7,15 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-basicNet = nn.ModuleList([
-        nn.Conv2d(in_channels=3, out_channels=512, kernel_size=3, padding=1),
-        nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, padding=1),
-        
+basicNet = [
+        nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, padding=1),
+        nn.relu()        
         nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, padding=1),
         nn.Conv2d(in_channels=512, out_channels=256, kernel_size=3, padding=1),
         
         nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, padding=1),
         nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, padding=1),
-])
+]
         #nn.Linear(25088, 4096),
         #nn.Linear(4096, 4096),
         #nn.Linear(4096, 10)])

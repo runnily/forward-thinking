@@ -12,9 +12,7 @@ def divide_data_by_group(dataset, num_data_per_group, batch_size=32, groups={0 :
   """
     Used to put data into different groups.
   """
-  print("here")
   targets = set(dataset.targets)
-  print(targets)
   selected_indices = 0
   for target in targets:
     selected_target_idx = dataset.targets == target
@@ -38,6 +36,8 @@ transform = Compose(
     [ToTensor(),
      Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 train_data = torchvision.datasets.CIFAR10("./data", train=True, download=True, transform=transform)
+print("here")
+print(len(train_data.targets)/len(set(train_data.targets))/10)
 
 groups = divide_data_by_group(train_data, 500)
 print(len(groups))

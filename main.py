@@ -8,16 +8,16 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available()  else 'cpu')
 input_size = 784 
 hidden_size = 512
 num_classes = 100
-num_epochs = 20
+num_epochs = 2
 batch_size = 128
 in_channels = 3 #1
 learning_rate = 0.01
-model = models.BasicNet(num_classes=num_classes, backpropgate=True).to(DEVICE)
+model = models.BasicNet(num_classes=num_classes).to(DEVICE)
 
 
 class Train():
 
-  def __init__(self,  train_loader, test_loader, model=model, lr=learning_rate, num_epochs=num_epochs):
+  def __init__(self,  test_loader, train_loader = None, train_data = None, model=model, lr=learning_rate, num_epochs=num_epochs):
     self.model = model
     self.train_loader = train_loader
     self.test_loader = test_loader
@@ -25,7 +25,15 @@ class Train():
     self.num_epochs = num_epochs
     self.recordAccuracy = utils.Measure()
     self.__running_time = 0.00
-
+    save_keys = self.model.incoming_layers
+    self.model.incoming_layers = dict()
+    if train_loader != None and train_data == None: # if train_loader is not defined
+      self.model.incoming_layers.update(dict.fromkeys([*save_keys], train_loader))
+    if train_data != None and train_loader == None:
+      self.model.incoming_layers.update(dict.fromkeys([*save_keys], []))
+      num_data_per_layer = len(train_data.targets)/len(set(train_data.targets))/len(self.model.incoming_layers)+1
+      self.model.incoming_layers = utils.divide_data_by_group(train_data, num_data_per_layer, 
+                                batch_size=batch_size, groups=self.model.incoming_layers)
 
   def optimizer_(self, parameters_to_be_optimized):
     return torch.optim.SGD(parameters_to_be_optimized, lr=self.lr, momentum=0.9)
@@ -36,7 +44,7 @@ class Train():
     classes = torch.argmax(predictions, dim=1) 
     return torch.mean((classes == labels).float()) # needs mean for each batch size
   
-  def __train(self, specific_params_to_be_optimized, num_epochs):
+  def __train(self, specific_params_to_be_optimized, num_epochs, train_loader):
 
     n_total_steps = len(self.train_loader)
                                 
@@ -54,7 +62,7 @@ class Train():
       running_accuracy = 0.00
       start = torch.cuda.Event(enable_timing=True)
       start.record()
-      for i, (images, labels) in enumerate(self.train_loader, 0): # looping over every batch
+      for i, (images, labels) in enumerate(train_loader, 0): # looping over every batch
           # get the inputs; data is a list of [inputs, labels]
          
           images = images.to(DEVICE)
@@ -79,7 +87,7 @@ class Train():
       torch.cuda.synchronize()
 
       test_accuracy = self.__test()
-      len_self_loader = len(self.train_loader)
+      len_self_loader = len(train_loader)
       running_accuracy /= len_self_loader
       running_loss /= len_self_loader
       print("Test accuracy: {}, Training accuracy: {}".format(test_accuracy, running_accuracy))
@@ -113,7 +121,7 @@ class Train():
   def __getEpochforLayer(self, layer_key, change_epochs_each_layer = False, epochs_each_layer={}):
     if change_epochs_each_layer:
       try:
-        return int(input("Number of epoch for {} ".format(layer_key)))
+        return int(input("Number of epoch for layer {} ".format(layer_key)))
       except:
         pass
     return epochs_each_layer.get(layer_key,  self.num_epochs)
@@ -121,30 +129,32 @@ class Train():
 
   def add_layers(self, change_epochs_each_layer = False, epochs_each_layer={}):
 
-    N = len(self.model.incoming_layers)
+    
     if self.model.backpropgate == True:
-      self.model.current_layers = self.model.incoming_layers
+      if train_loader == None:
+              raise ValueError("You cannot backpropgate with train_loader set as 0")
+      self.model.current_layers = nn.ModuleList(list(self.model.incoming_layers.keys())).to(DEVICE)
       print(self.model.current_layers)
       params = [{'params': self.model.classifier.parameters()}]
       for l in self.model.current_layers:
         params.append({'params': l.parameters()})
-      self.__train(params, self.num_epochs)
+      self.__train(params, self.num_epochs, train_loader)
    
     else:
-      print(self.model.backpropgate)
 
-      for i in range(N):
-        layer = self.model.incoming_layers[i] # incoming new layer
+      for i, layer in enumerate(self.model.incoming_layers):
         # 1. Add new layer to model
-        self.model.current_layers.append(layer)
+        self.model.current_layers.append(layer.to(DEVICE))
         # 2. diregarded output as output layer is retrained with every new added layer
         self.model.classifier = nn.LazyLinear(out_features=self.model.num_classes).to(DEVICE)
-        if not isinstance(self.model.incoming_layers[i], nn.ReLU) or not isinstance(self.model.incoming_layers[i], nn.MaxPool2d) or not isinstance(self.model.incoming_layers[i], nn.AvgPool2d):
+        if not isinstance(layer, nn.ReLU) or not isinstance(layer, nn.MaxPool2d) or not isinstance(layer, nn.AvgPool2d):
           # 3. defining parameters to be optimized
           specific_params_to_be_optimized = [{'params': self.model.current_layers[-1].parameters()}, {'params': self.model.classifier.parameters()}]
           # 4. Train 
+            # 4a. Get the number of epochs
           num_epochs = self.__getEpochforLayer(i, change_epochs_each_layer, epochs_each_layer)
-          self.__train(specific_params_to_be_optimized, num_epochs = num_epochs)
+            # 4b. Training the model
+          self.__train(specific_params_to_be_optimized, num_epochs, self.model.incoming_layers[layer])
           # 5. As we have trained add layer to the frozen_layers
           self.model.frozen_layers.append(self.model.current_layers[-1])
           # 6. Freeze layers
@@ -152,14 +162,16 @@ class Train():
         else:
           pass
 
-    # This part is to train the last layers
-    if len(self.model.incoming_layers) == len(self.model.incoming_layers) and self.model.backpropgate==False:
-        num_epochs = self.__getEpochforLayer(N, change_epochs_each_layer, epochs_each_layer)
-        self.__train([{'params': self.model.classifier.parameters()}], num_epochs = num_epochs)
+      incoming_layers_len = len(self.model.incoming_layers)
+      # This part is to train the last layers
+      if len(self.model.current_layers) == incoming_layers_len and self.model.backpropgate==False:
+          num_epochs = self.__getEpochforLayer(incoming_layers_len, change_epochs_each_layer, epochs_each_layer)
+          
+          self.__train([{'params': self.model.classifier.parameters()}], num_epochs, self.model.incoming_layers[layer] )
 
 if __name__ == "__main__":
-  train_loader, test_loader = utils.CIFAR_100()
-  train = Train(train_loader, test_loader)
+  train_loader, test_loader, _, _ = utils.CIFAR_10()
+  train = Train(test_loader, train_loader)
   train.add_layers()
   train.recordAccuracy.save()
 
