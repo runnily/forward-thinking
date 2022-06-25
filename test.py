@@ -2,38 +2,48 @@ from torch.functional import split
 from torchvision.transforms import ToTensor, Normalize, Compose
 import torchvision
 import torch
-from torch.utils.data import DataLoader, Subset
+from torch.utils.data import DataLoader, Subset, ConcatDataset
 import numpy as np
 import copy
 
 # preprocessor
-def train_data_for_layers(train_data, split, batch_size=32, groups={0 : None, 1: None, 
-                                          2: None, 3: None, 4: None, 5:
-                                          None, 6 : None, 7 : None, 8 : None, 9: None}):
-  targets = np.array(train_data.targets)
-  data = train_data.data
-  target_set = set(targets)  
-  for i in range(len(split)-1): # go through split array to find where to split the data
-    for group in groups: # go through each group defined
-      a = np.array([])
-      for target in target_set: 
-        # Here goes through each target and to distrubute different classes in the 
-        # training group dataset
-        group_targets_idx = targets==target
-        training_group = copy.deepcopy(train_data)
-        training_group.targets = targets[group_targets_idx]
-        training_group.data = data[group_targets_idx]
-        training_group = Subset(training_group, [split[i],split[i+1]])
-        a.append(training_group)
-    groups[group] = DataLoader(training_group, batch_size, shuffle=True)
-  return groups
+def divide_data_by_group(dataset, num_data_per_group, batch_size=32, groups={0 : [], 1: [], 2:[], 
+                                          3: [], 4: [], 5: [], 6 : [], 7 : [], 8 : [], 9: []}):
+  """
+    Used to put data into different groups.
+  """
+  print("here")
+  targets = set(dataset.targets)
+  print(targets)
+  selected_indices = 0
+  for target in targets:
+    selected_target_idx = dataset.targets == target
+    selected_target_data = copy.deepcopy(dataset)
+    selected_target_data.targets = selected_target_data.targets[selected_target_idx]
+    selected_target_data.data = selected_target_data.data[selected_target_idx]
+    for group in groups:
+      subset = Subset(selected_target_data, list(range(selected_indices, selected_indices+num_data_per_group, 1) ))
+      selected_indices += num_data_per_group
+      groups[group].append(subset)
+    selected_indices = 0
+  
+  groups_data_loader = {}
+  for group in groups:
+    data = ConcatDataset(groups[group])
+    groups_data_loader[group] = DataLoader(data, batch_size, shuffle=True)
+
+  return groups_data_loader 
         
 transform = Compose(
     [ToTensor(),
      Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 train_data = torchvision.datasets.CIFAR10("./data", train=True, download=True, transform=transform)
 
-groups = train_data_for_layers(train_data, [0,500,1000,1500,2000,2500,3000,3500,4000,4500,5000])
+groups = divide_data_by_group(train_data, 500)
 print(len(groups))
 for group in groups:
-  print(len(groups[group]["train"]))
+  print("number of data per group")
+  num = len(groups[group])
+  print(num)
+
+
