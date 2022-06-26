@@ -8,11 +8,11 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available()  else 'cpu')
 input_size = 784 
 hidden_size = 512
 num_classes = 100
-num_epochs = 2
+num_epochs = 5
 batch_size = 128
 in_channels = 3 #1
 learning_rate = 0.01
-model = models.BasicNet(num_classes=num_classes).to(DEVICE)
+model = models.Convnet2(num_classes=num_classes).to(DEVICE)
 
 
 class Train():
@@ -25,16 +25,25 @@ class Train():
     self.num_epochs = num_epochs
     self.recordAccuracy = utils.Measure()
     self.__running_time = 0.00
+    self.classifier_train_loader = train_loader
     save_keys = self.model.incoming_layers
-    self.model.incoming_layers = dict()
-    if train_loader != None and train_data == None: # if train_loader is not defined
+    self.model.incoming_layers = {}
+
+    # if train_loader is defined than uses whole dataset for each layer
+    if train_loader != None and train_data == None: 
       self.model.incoming_layers.update(dict.fromkeys([*save_keys], train_loader))
-    if train_data != None and train_loader == None:
+
+    # if no train_loader and train_data is given uses subset of data for each layer
+    if train_data != None and train_loader == None: 
       self.model.incoming_layers.update(dict.fromkeys([*save_keys], []))
-      num_data_per_layer = int(len(train_data.targets)/len(set(train_data.targets))/len(self.model.incoming_layers)+1)
+      
+      self.model.incoming_layers.update(dict.fromkeys([self.model.classifier], []))
+      num_data_per_layer = int(len(train_data.targets)/len(set(train_data.targets))/len(self.model.incoming_layers))
       self.model.incoming_layers = utils.divide_data_by_group(train_data, num_data_per_layer, 
                                 batch_size=batch_size, groups=self.model.incoming_layers)
+      self.classifier_train_loader = self.model.incoming_layers.pop(self.model.classifier)
       print(self.model.incoming_layers)
+      print(self.classifier_train_loader)
 
   def optimizer_(self, parameters_to_be_optimized):
     return torch.optim.SGD(parameters_to_be_optimized, lr=self.lr, momentum=0.9)
@@ -165,15 +174,15 @@ class Train():
 
       incoming_layers_len = len(self.model.incoming_layers)
       # This part is to train the last layers
-      if len(self.model.current_layers) == incoming_layers_len and self.model.backpropgate==False:
+      if self.model.backpropgate==False and len(self.model.current_layers) == incoming_layers_len:
           num_epochs = self.__getEpochforLayer(incoming_layers_len, change_epochs_each_layer, epochs_each_layer)
-          
-          self.__train([{'params': self.model.classifier.parameters()}], num_epochs, self.model.incoming_layers[layer] )
+          print("exploding !!")
+          self.__train([{'params': self.model.classifier.parameters()}], num_epochs, self.classifier_train_loader)
 
 if __name__ == "__main__":
-  #train_loader, test_loader, _, _ = utils.CIFAR_10()
-  _, test_loader, train_data, _ = utils.CIFAR_10()
-  train = Train(test_loader, train_data=train_data)
+  train_loader, test_loader, _, _ = utils.CIFAR_10()
+  #_, test_loader, train_data, _ = utils.CIFAR_10()
+  train = Train(test_loader, train_loader=train_loader)
   train.add_layers()
   train.recordAccuracy.save()
 
