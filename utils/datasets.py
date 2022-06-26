@@ -45,28 +45,23 @@ def SVHN(batch_size=128):
 
 def divide_data_by_group(dataset, num_data_per_group, batch_size=32, groups={0 : [], 1: [], 2:[], 
                                           3: [], 4: [], 5: [], 6 : [], 7 : [], 8 : [], 9: []}):
-  """
-    Used to put data into different groups.
-  """
+ 
   targets = set(dataset.targets)
   selected_indices = 0
   for target in targets:
-    selected_target_idx = dataset.targets == target
-    selected_target_data = copy.deepcopy(dataset)
-    selected_target_data.targets = selected_target_data.targets[selected_target_idx]
-    selected_target_data.data = selected_target_data.data[selected_target_idx]
+    selected_target_idx = torch.tensor(dataset.targets) == target
+    selected_target_idx = selected_target_idx.nonzero().reshape(-1)
     for group in groups:
-      subset = Subset(selected_target_data, list(range(selected_indices, selected_indices+num_data_per_group, 1) ))
+      group_target_idx = selected_target_idx[selected_indices:selected_indices+num_data_per_group]
       selected_indices += num_data_per_group
-      groups[group].append(subset)
+      groups[group] += group_target_idx
     selected_indices = 0
-  
+
   groups_data_loader = {}
   for group in groups:
-    data = ConcatDataset(groups[group])
+    data = Subset(dataset, groups[group])
     groups_data_loader[group] = DataLoader(data, batch_size, shuffle=True)
-
-  return groups_data_loader 
+  return groups_data_loader
         
 
 def loaders(train_data, test_data, batch_size=128):

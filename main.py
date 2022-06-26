@@ -31,9 +31,10 @@ class Train():
       self.model.incoming_layers.update(dict.fromkeys([*save_keys], train_loader))
     if train_data != None and train_loader == None:
       self.model.incoming_layers.update(dict.fromkeys([*save_keys], []))
-      num_data_per_layer = len(train_data.targets)/len(set(train_data.targets))/len(self.model.incoming_layers)+1
+      num_data_per_layer = int(len(train_data.targets)/len(set(train_data.targets))/len(self.model.incoming_layers)+1)
       self.model.incoming_layers = utils.divide_data_by_group(train_data, num_data_per_layer, 
                                 batch_size=batch_size, groups=self.model.incoming_layers)
+      print(self.model.incoming_layers)
 
   def optimizer_(self, parameters_to_be_optimized):
     return torch.optim.SGD(parameters_to_be_optimized, lr=self.lr, momentum=0.9)
@@ -45,9 +46,9 @@ class Train():
     return torch.mean((classes == labels).float()) # needs mean for each batch size
   
   def __train(self, specific_params_to_be_optimized, num_epochs, train_loader):
+    
+    n_total_steps = len(train_loader)
 
-    n_total_steps = len(self.train_loader)
-                                
     optimizer = self.optimizer_(specific_params_to_be_optimized)
     criterion = nn.CrossEntropyLoss().to(DEVICE)
 
@@ -170,8 +171,9 @@ class Train():
           self.__train([{'params': self.model.classifier.parameters()}], num_epochs, self.model.incoming_layers[layer] )
 
 if __name__ == "__main__":
-  train_loader, test_loader, _, _ = utils.CIFAR_10()
-  train = Train(test_loader, train_loader)
+  #train_loader, test_loader, _, _ = utils.CIFAR_10()
+  _, test_loader, train_data, _ = utils.CIFAR_10()
+  train = Train(test_loader, train_data=train_data)
   train.add_layers()
   train.recordAccuracy.save()
 
