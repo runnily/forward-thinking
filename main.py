@@ -7,13 +7,13 @@ import models
 DEVICE = torch.device('cuda' if torch.cuda.is_available()  else 'cpu')
 input_size = 784 
 hidden_size = 512
-num_classes = 100
+num_classes = 10
 num_epochs = 10
 batch_size = 64
 in_channels = 3 #1
 learning_rate = 0.01
-model = models.Convnet2(num_classes=num_classes).to(DEVICE)
-
+model = models.Convnet2(num_classes=num_classes, batchnorm=True).to(DEVICE)
+model.device = DEVICE
 
 class Train():
 
@@ -35,15 +35,17 @@ class Train():
 
     # if no train_loader and train_data is given uses subset of data for each layer
     if train_data != None and train_loader == None: 
-      self.model.incoming_layers.update(dict.fromkeys([*save_keys], []))
       
-      self.model.incoming_layers.update(dict.fromkeys([self.model.classifier], []))
+      for key in save_keys:
+        self.model.incoming_layers[key] = []
+      self.model.incoming_layers[self.model.classifier] = []
+
       num_data_per_layer = int(len(train_data.targets)/len(set(train_data.targets))/len(self.model.incoming_layers))
       self.model.incoming_layers = utils.divide_data_by_group(train_data, num_data_per_layer, 
                                 batch_size=batch_size, groups=self.model.incoming_layers)
+   
       self.classifier_train_loader = self.model.incoming_layers.pop(self.model.classifier)
-      print(self.model.incoming_layers)
-      print(self.classifier_train_loader)
+      
 
   def optimizer_(self, parameters_to_be_optimized):
     return torch.optim.SGD(parameters_to_be_optimized, lr=self.lr, momentum=0.9)
@@ -77,7 +79,6 @@ class Train():
          
           images = images.to(DEVICE)
           labels = labels.to(DEVICE)
-
           outputs = self.model(images)
 
           # forward + backward + optimize
@@ -139,7 +140,10 @@ class Train():
 
   def add_layers(self, change_epochs_each_layer = False, epochs_each_layer={}):
 
-    
+    def _addBatchParams(params):
+      for batch in self.model.batch_layers:
+        params.append({"params":batch.parameters()})
+
     if self.model.backpropgate == True:
       if train_loader == None:
               raise ValueError("You cannot backpropgate with train_loader set as 0")
@@ -160,6 +164,8 @@ class Train():
         if not isinstance(layer, nn.ReLU) or not isinstance(layer, nn.MaxPool2d) or not isinstance(layer, nn.AvgPool2d):
           # 3. defining parameters to be optimized
           specific_params_to_be_optimized = [{'params': self.model.current_layers[-1].parameters()}, {'params': self.model.classifier.parameters()}]
+          if self.model.batchnorm:
+            _addBatchParams(specific_params_to_be_optimized)
           # 4. Train 
             # 4a. Get the number of epochs
           num_epochs = self.__getEpochforLayer(i, change_epochs_each_layer, epochs_each_layer)
@@ -176,12 +182,12 @@ class Train():
       # This part is to train the last layers
       if self.model.backpropgate==False and len(self.model.current_layers) == incoming_layers_len:
           num_epochs = self.__getEpochforLayer(incoming_layers_len, change_epochs_each_layer, epochs_each_layer)
-          print("exploding !!")
+          print("Last layer!!")
           self.__train([{'params': self.model.classifier.parameters()}], num_epochs, self.classifier_train_loader)
 
 if __name__ == "__main__":
-  train_loader, test_loader, _, _ = utils.CIFAR_100(batch_size=batch_size)
-  #_, test_loader, train_data, _ = utils.CIFAR_100()
+  train_loader, test_loader, _, _ = utils.CIFAR_10(batch_size=batch_size)
+  #_, test_loader, train_data, _ = utils.CIFAR_10()
   train = Train(test_loader, train_loader=train_loader)
   train.add_layers()
   train.recordAccuracy.save()
