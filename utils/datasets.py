@@ -37,7 +37,8 @@ def MNIST(batch_size=128):
 def SVHN(batch_size=128):
   """Builds and returns Dataloader for MNIST and SVHN dataset."""
 
-  transform = Compose([ToTensor(), Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+  transform = Compose([
+    ToTensor(), Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
   train_data = torchvision.datasets.SVHN(root="./data", split="train", download=True, transform=transform)
   test_data = torchvision.datasets.SVHN(root="./data", split="test", download=True, transform=transform)

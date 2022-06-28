@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.modules import batchnorm
 import utils 
 import models
 
@@ -8,11 +9,11 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available()  else 'cpu')
 input_size = 784 
 hidden_size = 512
 num_classes = 10
-num_epochs = 10
+num_epochs = 1
 batch_size = 64
 in_channels = 3 #1
 learning_rate = 0.01
-model = models.Convnet2(num_classes=num_classes, batchnorm=True).to(DEVICE)
+model = models.Convnet2(num_classes=num_classes,  batchnorm=True).to(DEVICE)
 model.device = DEVICE
 
 class Train():
@@ -169,6 +170,7 @@ class Train():
           # 4. Train 
             # 4a. Get the number of epochs
           num_epochs = self.__getEpochforLayer(i, change_epochs_each_layer, epochs_each_layer)
+          print("This is layer {}".format(i))
             # 4b. Training the model
           self.__train(specific_params_to_be_optimized, num_epochs, self.model.incoming_layers[layer])
           # 5. As we have trained add layer to the frozen_layers
@@ -186,7 +188,7 @@ class Train():
           self.__train([{'params': self.model.classifier.parameters()}], num_epochs, self.classifier_train_loader)
 
 if __name__ == "__main__":
-  train_loader, test_loader, _, _ = utils.CIFAR_10(batch_size=batch_size)
+  train_loader, test_loader, _, _ = utils.SVHN(batch_size=batch_size)
   #_, test_loader, train_data, _ = utils.CIFAR_10()
   train = Train(test_loader, train_loader=train_loader)
   train.add_layers()

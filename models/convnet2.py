@@ -33,13 +33,12 @@ net = [
 
 class Convnet2(BaseModel):
 
-  def __init__(self, num_classes=10, backpropgate=False, batchnorm=False):
-    super(Convnet2, self).__init__(net, num_classes, backpropgate=backpropgate)
+  def __init__(self, num_classes=10, backpropgate=False, batch_norm=False):
+    super(Convnet2, self).__init__(net, num_classes, backpropgate=backpropgate, batch_norm=batch_norm)
     self.classifier = nn.Sequential(
       nn.LazyLinear(1024),
       #nn.Linear(1024, 1024),
       nn.Linear(1024, num_classes))
-    self.batchnorm = batchnorm
     self.batch_layers = nn.ModuleList()
     self.device = None
 
@@ -48,13 +47,16 @@ class Convnet2(BaseModel):
       if i in {2, 4, 8}: # 8
         x = F.max_pool2d(x, kernel_size=(2,2),stride=2)
         x = F.dropout2d(x, 0.25)
-      if self.batchnorm:
-        batch_layer = nn.BatchNorm2d(x.shape[1]).to(self.device)
+      if self.batchnorm: # error occurs here because its applying a batch with every call 
+        batch_layer = nn.LazyBatchNorm2d().to(self.device)
         self.batch_layers.append(batch_layer)
         x = batch_layer(x)
+        #print(x.shape[1])
       x = F.relu(layer(x))
 
     x = x.view(x.size(0), -1)
     x = self.classifier(x)
     return x
+
+    
 
