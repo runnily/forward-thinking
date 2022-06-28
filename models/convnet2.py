@@ -16,8 +16,6 @@ net = [
         nn.Conv2d(in_channels=64, out_channels=128, kernel_size=(3,3), padding=1),
         # 3 : kernel: 3x3, channel: 128, padding: 1
         nn.Conv2d(in_channels=128, out_channels=128, kernel_size=(3,3), padding=1),
-        #
-        nn.Conv2d(in_channels=128, out_channels=128, kernel_size=(3,3), padding=1),
         # 4 : kernel: 3x3, channel: 128, padding: 1
         nn.Conv2d(in_channels=128, out_channels=256, kernel_size=(3,3), padding=1),
         # 5 : kernel: 3x3, channel: 256, padding: 1
@@ -35,19 +33,27 @@ net = [
 
 class Convnet2(BaseModel):
 
-  def __init__(self, num_classes=10, backpropgate=False):
+  def __init__(self, num_classes=10, backpropgate=False, batchnorm=False):
     super(Convnet2, self).__init__(net, num_classes, backpropgate=backpropgate)
     self.classifier = nn.Sequential(
       nn.LazyLinear(1024),
       #nn.Linear(1024, 1024),
       nn.Linear(1024, num_classes))
+    self.batchnorm = batchnorm
+    self.batch_layers = nn.ModuleList()
+    self.device = None
 
   def forward(self, x):
     for i, layer in enumerate(self.current_layers):
-      x = F.relu(layer(x))
-      if i in {2, 4, 9}: # 8
+      if i in {2, 4, 8}: # 8
         x = F.max_pool2d(x, kernel_size=(2,2),stride=2)
         x = F.dropout2d(x, 0.25)
+      if self.batchnorm:
+        batch_layer = nn.BatchNorm2d(x.shape[1]).to(self.device)
+        self.batch_layers.append(batch_layer)
+        x = batch_layer(x)
+      x = F.relu(layer(x))
+
     x = x.view(x.size(0), -1)
     x = self.classifier(x)
     return x
