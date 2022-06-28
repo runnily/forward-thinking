@@ -58,11 +58,11 @@ def divide_data_by_group(dataset, num_data_per_group, batch_size=32, groups={0 :
     selected_indices = 0
 
   groups_data_loader = {}
+
   for group in groups:
     data = Subset(dataset, groups[group])
-    groups_data_loader[group] = DataLoader(data, batch_size, shuffle=True)
+    groups_data_loader[group] = DataLoader(data, batch_size=batch_size, shuffle=True)
   return groups_data_loader
-        
 
 def loaders(train_data, test_data, batch_size=128):
   train_loader = DataLoader(train_data, batch_size=batch_size,num_workers=2, shuffle=True)
