@@ -47,7 +47,7 @@ class Convnet2(BaseModel):
       if i in {2, 4, 8}: # 8
         x = F.max_pool2d(x, kernel_size=(2,2),stride=2)
         x = F.dropout2d(x, 0.25)
-      if self.batchnorm: # error occurs here because its applying a batch with every call 
+      if self.batch_norm: # error occurs here because its applying a batch with every call 
         batch_layer = nn.LazyBatchNorm2d().to(self.device)
         self.batch_layers.append(batch_layer)
         x = batch_layer(x)

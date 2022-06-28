@@ -13,7 +13,7 @@ num_epochs = 1
 batch_size = 64
 in_channels = 3 #1
 learning_rate = 0.01
-model = models.Convnet2(num_classes=num_classes,  batchnorm=True).to(DEVICE)
+model = models.Convnet2(num_classes=num_classes,  batch_norm=True).to(DEVICE)
 model.device = DEVICE
 
 class Train():
@@ -165,7 +165,7 @@ class Train():
         if not isinstance(layer, nn.ReLU) or not isinstance(layer, nn.MaxPool2d) or not isinstance(layer, nn.AvgPool2d):
           # 3. defining parameters to be optimized
           specific_params_to_be_optimized = [{'params': self.model.current_layers[-1].parameters()}, {'params': self.model.classifier.parameters()}]
-          if self.model.batchnorm:
+          if self.model.batch_norm:
             _addBatchParams(specific_params_to_be_optimized)
           # 4. Train 
             # 4a. Get the number of epochs
@@ -188,7 +188,7 @@ class Train():
           self.__train([{'params': self.model.classifier.parameters()}], num_epochs, self.classifier_train_loader)
 
 if __name__ == "__main__":
-  train_loader, test_loader, _, _ = utils.SVHN(batch_size=batch_size)
+  train_loader, test_loader, _, _ = utils.CIFAR_10(batch_size=batch_size)
   #_, test_loader, train_data, _ = utils.CIFAR_10()
   train = Train(test_loader, train_loader=train_loader)
   train.add_layers()
