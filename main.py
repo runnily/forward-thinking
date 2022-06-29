@@ -9,11 +9,12 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available()  else 'cpu')
 input_size = 784 
 hidden_size = 512
 num_classes = 10
-num_epochs = 1
+num_epochs = 20
 batch_size = 64
 in_channels = 3 #1
 learning_rate = 0.01
-model = models.Convnet2(num_classes=num_classes,  batch_norm=True).to(DEVICE)
+model = models.Convnet2(num_classes=num_classes).to(DEVICE)
+model.device = DEVICE
 
 class Train():
 
@@ -47,7 +48,7 @@ class Train():
       self.classifier_train_loader = self.model.incoming_layers.pop(self.model.classifier)
       
 
-  def optimizer_(self, parameters_to_be_optimized):
+  def __optimizer(self, parameters_to_be_optimized):
     return torch.optim.SGD(parameters_to_be_optimized, lr=self.lr, momentum=0.9)
     #return torch.optim.Adadelta(parameters_to_be_optimized, lr=self.lr, rho=0.9, eps=1e-3, weight_decay=0.001)
 
@@ -60,7 +61,7 @@ class Train():
     
     n_total_steps = len(train_loader)
 
-    optimizer = self.optimizer_(specific_params_to_be_optimized)
+    optimizer = self.__optimizer(specific_params_to_be_optimized)
     criterion = nn.CrossEntropyLoss().to(DEVICE)
 
     # model.train() tells your model that you are training the model.
@@ -143,9 +144,10 @@ class Train():
     def _addBatchParams(layers, params): # gets error here
       for layer in layers:
         batch_paras = self.model.batch_layers[layer].parameters()
-        params.append({"params":batch_paras})
+        params.append({"params" :batch_paras })
+        
 
-    if self.model.backpropgate == True:
+    if self.model.backpropgate == True: # look at this again
       if train_loader == None:
               raise ValueError("You cannot backpropgate with train_loader set as 0")
       self.model.current_layers = nn.ModuleList(list(self.model.incoming_layers.keys())).to(DEVICE)
@@ -164,8 +166,8 @@ class Train():
         self.model.classifier = nn.LazyLinear(out_features=self.model.num_classes).to(DEVICE)
         if not isinstance(layer, nn.ReLU) or not isinstance(layer, nn.MaxPool2d) or not isinstance(layer, nn.AvgPool2d):
           # 3. defining parameters to be optimized
-          specific_params_to_be_optimized = [{'params': self.model.current_layers[-1].parameters()}, {'params': self.model.classifier.parameters()}]
-          if self.model.batch_norm:
+          specific_params_to_be_optimized = [{'params': layer.parameters()}, {'params': self.model.classifier.parameters()}]
+          if self.model.batch_norm and self.model.batch_layers != None:
             _addBatchParams(self.model.current_layers, specific_params_to_be_optimized)
           # 4. Train 
             # 4a. Get the number of epochs
@@ -188,9 +190,9 @@ class Train():
           self.__train([{'params': self.model.classifier.parameters()}], num_epochs, self.classifier_train_loader)
 
 if __name__ == "__main__":
-  train_loader, test_loader, _, _ = utils.CIFAR_10(batch_size=batch_size)
-  #_, test_loader, train_data, _ = utils.CIFAR_10()
-  train = Train(test_loader, train_loader=train_loader)
+  #train_loader, test_loader, _, _ = utils.SVHN(batch_size=batch_size)
+  _, test_loader, train_data, _ = utils.CIFAR_10()
+  train = Train(test_loader, train_data=train_data)
   train.add_layers()
   train.recordAccuracy.save()
 

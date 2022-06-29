@@ -37,9 +37,10 @@ class Convnet2(BaseModel):
     super(Convnet2, self).__init__(net, num_classes, backpropgate=backpropgate, batch_norm=batch_norm)
     self.classifier = nn.Sequential(
       nn.LazyLinear(1024),
-      #nn.Linear(1024, 1024),
+      # nn.Linear(1024, 1024),
       nn.Linear(1024, num_classes))
     self.batch_layers = {}
+    self.device = None
     if self.batch_norm:
       self.make_layers()
       
@@ -49,9 +50,10 @@ class Convnet2(BaseModel):
       if i in {2, 4, 8}: # 8
         x = F.max_pool2d(x, kernel_size=(2,2),stride=2)
         x = F.dropout2d(x, 0.25)
+      x = layer(x)
       if self.batch_norm and layer in self.batch_layers: # apply batch if specificed
-        x = self.batch_layers[layer](x)
-      x = F.relu(layer(x))
+        x = self.batch_layers[layer].to(self.device)(x)
+      x = F.relu(x)
 
     x = x.view(x.size(0), -1)
     x = self.classifier(x)
@@ -59,7 +61,7 @@ class Convnet2(BaseModel):
 
   def make_layers(self):
     for layer in self.incoming_layers:
-      self.batch_layers[layer] = nn.BatchNorm2d(layer.out_channels)
+      self.batch_layers[layer] = nn.BatchNorm2d(num_features=layer.out_channels)
 
     
 
