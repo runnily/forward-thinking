@@ -14,7 +14,6 @@ batch_size = 64
 in_channels = 3 #1
 learning_rate = 0.01
 model = models.Convnet2(num_classes=num_classes,  batch_norm=True).to(DEVICE)
-model.device = DEVICE
 
 class Train():
 
@@ -141,9 +140,10 @@ class Train():
 
   def add_layers(self, change_epochs_each_layer = False, epochs_each_layer={}):
 
-    def _addBatchParams(params):
-      for batch in self.model.batch_layers:
-        params.append({"params":batch.parameters()})
+    def _addBatchParams(layers, params): # gets error here
+      for layer in layers:
+        batch_paras = self.model.batch_layers[layer].parameters()
+        params.append({"params":batch_paras})
 
     if self.model.backpropgate == True:
       if train_loader == None:
@@ -166,7 +166,7 @@ class Train():
           # 3. defining parameters to be optimized
           specific_params_to_be_optimized = [{'params': self.model.current_layers[-1].parameters()}, {'params': self.model.classifier.parameters()}]
           if self.model.batch_norm:
-            _addBatchParams(specific_params_to_be_optimized)
+            _addBatchParams(self.model.current_layers, specific_params_to_be_optimized)
           # 4. Train 
             # 4a. Get the number of epochs
           num_epochs = self.__getEpochforLayer(i, change_epochs_each_layer, epochs_each_layer)

@@ -39,24 +39,27 @@ class Convnet2(BaseModel):
       nn.LazyLinear(1024),
       #nn.Linear(1024, 1024),
       nn.Linear(1024, num_classes))
-    self.batch_layers = nn.ModuleList()
-    self.device = None
+    self.batch_layers = {}
+    if self.batch_norm:
+      self.make_layers()
+      
 
   def forward(self, x):
     for i, layer in enumerate(self.current_layers):
       if i in {2, 4, 8}: # 8
         x = F.max_pool2d(x, kernel_size=(2,2),stride=2)
         x = F.dropout2d(x, 0.25)
-      if self.batch_norm: # error occurs here because its applying a batch with every call 
-        batch_layer = nn.LazyBatchNorm2d().to(self.device)
-        self.batch_layers.append(batch_layer)
-        x = batch_layer(x)
-        #print(x.shape[1])
+      if self.batch_norm and layer in self.batch_layers: # apply batch if specificed
+        x = self.batch_layers[layer](x)
       x = F.relu(layer(x))
 
     x = x.view(x.size(0), -1)
     x = self.classifier(x)
     return x
+
+  def make_layers(self):
+    for layer in self.incoming_layers:
+      self.batch_layers[layer] = nn.BatchNorm2d(layer.out_channels)
 
     
 
