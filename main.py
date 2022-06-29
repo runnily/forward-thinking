@@ -13,8 +13,7 @@ num_epochs = 5
 batch_size = 64
 in_channels = 3 #1
 learning_rate = 0.01
-model = models.Convnet2(num_classes=num_classes).to(DEVICE)
-model.device = DEVICE
+model = models.Convnet2BN(num_classes=num_classes).to(DEVICE)
 
 class Train():
 
@@ -127,8 +126,11 @@ class Train():
 
   def freeze_layers_(self):
     if self.model.backpropgate == False:
-      for l in self.model.frozen_layers:
-        l.requires_grad_(False)
+      for l in self.model.frozen_layers: 
+        if self.model.batch_norm:
+          l[0].requires_grad_(False)
+        else:
+          l.requires_grad_(False)
 
   def __getEpochforLayer(self, layer_key, change_epochs_each_layer = False, epochs_each_layer={}):
     if change_epochs_each_layer:
@@ -143,8 +145,18 @@ class Train():
 
     def _addBatchParams(layers, params): # gets error here
       for layer in layers:
-        batch_paras = self.model.batch_layers[layer].parameters()
+        print(layer)
+        batch_paras = layer[1].parameters()
         params.append({"params" :batch_paras })
+
+    def _defineParas(layer):
+      specific_params_to_be_optimized = [{'params': self.model.classifier.parameters()}]
+      if self.model.batch_norm and self.model.batch_layers != None:
+        specific_params_to_be_optimized.append({'params': layer[0].parameters()})
+        _addBatchParams(self.model.current_layers, specific_params_to_be_optimized)
+      else:
+        specific_params_to_be_optimized.append({'params': layer.parameters()})
+      return specific_params_to_be_optimized
         
 
     if self.model.backpropgate == True: # look at this again
@@ -166,9 +178,7 @@ class Train():
         self.model.classifier = nn.LazyLinear(out_features=self.model.num_classes).to(DEVICE)
         if not isinstance(layer, nn.ReLU) or not isinstance(layer, nn.MaxPool2d) or not isinstance(layer, nn.AvgPool2d):
           # 3. defining parameters to be optimized
-          specific_params_to_be_optimized = [{'params': layer.parameters()}, {'params': self.model.classifier.parameters()}]
-          if self.model.batch_norm and self.model.batch_layers != None:
-            _addBatchParams(self.model.current_layers, specific_params_to_be_optimized)
+          specific_params_to_be_optimized = _defineParas(layer)
           # 4. Train 
             # 4a. Get the number of epochs
           num_epochs = self.__getEpochforLayer(i, change_epochs_each_layer, epochs_each_layer)
@@ -190,9 +200,9 @@ class Train():
           self.__train([{'params': self.model.classifier.parameters()}], num_epochs, self.classifier_train_loader)
 
 if __name__ == "__main__":
-  train_loader, test_loader, _, _ = utils.CIFAR_100(batch_size=batch_size)
-  #_, test_loader, train_data, _ = utils.CIFAR_100()
-  train = Train(test_loader, train_loader=train_loader)
+  #train_loader, test_loader, _, _ = utils.CIFAR_10(batch_size=batch_size)
+  _, test_loader, train_data, _ = utils.CIFAR_100()
+  train = Train(test_loader, train_data=train_data)
   train.add_layers()
   train.recordAccuracy.save()
 
