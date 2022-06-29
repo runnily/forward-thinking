@@ -13,7 +13,7 @@ num_epochs = 5
 batch_size = 64
 in_channels = 3 #1
 learning_rate = 0.01
-model = models.Convnet2BN(num_classes=num_classes).to(DEVICE)
+model = models.Convnet2BN(num_classes=num_classes, backpropgate=True).to(DEVICE)
 
 class Train():
 
@@ -145,7 +145,6 @@ class Train():
 
     def _addBatchParams(layers, params): # gets error here
       for layer in layers:
-        print(layer)
         batch_paras = layer[1].parameters()
         params.append({"params" :batch_paras })
 
@@ -160,14 +159,14 @@ class Train():
         
 
     if self.model.backpropgate == True: # look at this again
-      if train_loader == None:
+      if self.train_loader == None:
               raise ValueError("You cannot backpropgate with train_loader set as 0")
       self.model.current_layers = nn.ModuleList(list(self.model.incoming_layers.keys())).to(DEVICE)
       print(self.model.current_layers)
       params = [{'params': self.model.classifier.parameters()}]
       for l in self.model.current_layers:
         params.append({'params': l.parameters()})
-      self.__train(params, self.num_epochs, train_loader)
+      self.__train(params, self.num_epochs, self.train_loader)
    
     else:
 
@@ -200,9 +199,9 @@ class Train():
           self.__train([{'params': self.model.classifier.parameters()}], num_epochs, self.classifier_train_loader)
 
 if __name__ == "__main__":
-  #train_loader, test_loader, _, _ = utils.CIFAR_10(batch_size=batch_size)
-  _, test_loader, train_data, _ = utils.CIFAR_100()
-  train = Train(test_loader, train_data=train_data)
+  train_loader, test_loader, _, _ = utils.CIFAR_10(batch_size=batch_size)
+  #_, test_loader, train_data, _ = utils.CIFAR_100()
+  train = Train(test_loader, train_loader=train_loader)
   train.add_layers()
   train.recordAccuracy.save()
 
