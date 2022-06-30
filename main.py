@@ -9,12 +9,12 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available()  else 'cpu')
 input_size = 784 
 hidden_size = 512
 num_classes = 100
-num_epochs = 50
+num_epochs = 1
 batch_size = 64
 in_channels = 3 #1
 learning_rate = 0.01
-model = models.Convnet2BN(num_classes=num_classes, backpropgate=True).to(DEVICE)
-
+#model = models.Convnet2BN(num_classes=num_classes, backpropgate=True).to(DEVICE)
+model = models.FeedForward(num_classes=num_classes).to(DEVICE)
 class Train():
 
   def __init__(self,  test_loader, train_loader = None, train_data = None, model=model, lr=learning_rate, num_epochs=num_epochs):
@@ -199,7 +199,7 @@ class Train():
           self.__train([{'params': self.model.classifier.parameters()}], num_epochs, self.classifier_train_loader)
 
 if __name__ == "__main__":
-  train_loader, test_loader, _, _ = utils.CIFAR_10(batch_size=batch_size)
+  train_loader, test_loader, _, _ = utils.MNIST(batch_size=batch_size)
   #_, test_loader, train_data, _ = utils.CIFAR_10()
   train = Train(test_loader, train_loader=train_loader)
   train.add_layers()
