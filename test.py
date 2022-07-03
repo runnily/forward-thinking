@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import os
-from collections import OrderedDict
+import models
 import torch.utils.model_zoo as model_zoo
 import torchvision.models.vgg as vgg
 
@@ -57,60 +57,55 @@ class Net(nn.Module):
 
   def __init__(self, num_classes: int = 10):
     super().__init__()
-    """self.features = nn.Sequential(
-        nn.Conv2d(3, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)),
-        nn.ReLU(inplace=True),
-        nn.MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False),
-        nn.Conv2d(64, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)),
-        nn.ReLU(inplace=True),
-        nn.MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False),
-        nn.Conv2d(128, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)),
-        nn.ReLU(inplace=True),
-        nn.Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)),
-        nn.ReLU(inplace=True),
-        nn.MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False),
-        nn.Conv2d(256, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)),
-        nn.ReLU(inplace=True),
-        nn.Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)),
-        nn.ReLU(inplace=True),
-        nn.MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False),
-        nn.Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)),
-        nn.ReLU(inplace=True),
-        nn.Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)),
-        nn.ReLU(inplace=True),
-        nn.MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False),
-        nn.AdaptiveAvgPool2d((7, 7))
-    )"""
-    self.features = nn.Sequential(# 0 : size: 24x24, channel: 3
-        nn.Conv2d(in_channels=3, out_channels=64, kernel_size=(3,3), padding=1),
-        nn.ReLU(inplace=True),
+    
+    self.features = nn.Sequential(
+        # 0 : size: 24x24, channel: 3
+        nn.Sequential(
+          nn.Conv2d(in_channels=3, out_channels=64, kernel_size=(3,3), padding=1),
+          nn.ReLU(inplace=True),),
         # 1 : kernel: 3x3, channel: 64, padding: 1
-        nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(3,3), padding=1),
-        nn.ReLU(inplace=True),
+        nn.Sequential(
+          nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(3,3), padding=1),
+          nn.ReLU(inplace=True),),
         # 2 : kernel: 3x3, channel: 64, padding: 1
-        nn.Conv2d(in_channels=64, out_channels=128, kernel_size=(3,3), padding=1),
-        nn.ReLU(inplace=True),
+        nn.Sequential(
+          nn.Conv2d(in_channels=64, out_channels=128, kernel_size=(3,3), padding=1),
+          nn.ReLU(inplace=True),
+          nn.MaxPool2d(kernel_size=(2,2),stride=2),
+          nn.Dropout(p=0.25),),
         # 3 : kernel: 3x3, channel: 128, padding: 1
-        nn.Conv2d(in_channels=128, out_channels=128, kernel_size=(3,3), padding=1),
-        nn.ReLU(inplace=True),
+        nn.Sequential(
+          nn.Conv2d(in_channels=128, out_channels=128, kernel_size=(3,3), padding=1),
+          nn.ReLU(inplace=True),),
         # 4 : kernel: 3x3, channel: 128, padding: 1
-        nn.Conv2d(in_channels=128, out_channels=256, kernel_size=(3,3), padding=1),
-        nn.ReLU(inplace=True),
+        nn.Sequential(
+          nn.Conv2d(in_channels=128, out_channels=256, kernel_size=(3,3), padding=1),
+          nn.ReLU(inplace=True),
+          nn.MaxPool2d(kernel_size=(2,2),stride=2),
+          nn.Dropout(p=0.25),),
         # 5 : kernel: 3x3, channel: 256, padding: 1
-        nn.Conv2d(in_channels=256, out_channels=256, kernel_size=(3,3), padding=1),
-        nn.ReLU(inplace=True),
+        nn.Sequential(
+          nn.Conv2d(in_channels=256, out_channels=256, kernel_size=(3,3), padding=1),
+          nn.ReLU(inplace=True),),
         # 6 : kernel: 3x3, channel: 256, padding: 1
-        nn.Conv2d(in_channels=256, out_channels=256, kernel_size=(3,3), padding=1),
-        nn.ReLU(inplace=True),
+        nn.Sequential(
+          nn.Conv2d(in_channels=256, out_channels=256, kernel_size=(3,3), padding=1),
+          nn.ReLU(inplace=True),),
         # 7 : kernel: 3x3, channel: 256, padding: 1
-        nn.Conv2d(in_channels=256, out_channels=256, kernel_size=(3,3), padding=1),
-        nn.ReLU(inplace=True),
+        nn.Sequential(
+          nn.Conv2d(in_channels=256, out_channels=256, kernel_size=(3,3), padding=1),
+          nn.ReLU(inplace=True),),
         # 8 : kernel: 3x3, channel: 256, padding: 1
-        nn.Conv2d(in_channels=256, out_channels=256, kernel_size=(3,3), padding=1),
-        nn.ReLU(inplace=True))
+        nn.Sequential(
+          nn.Conv2d(in_channels=256, out_channels=256, kernel_size=(3,3), padding=1),
+          nn.ReLU(inplace=True),
+          nn.MaxPool2d(kernel_size=(2,2),stride=2),
+          nn.Dropout(p=0.25),)
+)
         # 9 : channel: 1024
         # 10 : channel: 1024
         # 11 : channel: 10
+    
 
     if True:
         for m in self.modules():
@@ -124,10 +119,10 @@ class Net(nn.Module):
             elif isinstance(m, nn.Linear):
                 nn.init.normal_(m.weight, 0, 0.01)
                 nn.init.constant_(m.bias, 0)
-    self.classifier = nn.Sequential(
-            nn.LazyLinear(512 * 7 * 7, 10),
+    
+    self.classifier = nn.LazyLinear(10)
             
-        )
+        
 
   def forward(self, x: torch.Tensor) -> torch.Tensor:
     x = self.features(x)
@@ -136,14 +131,13 @@ class Net(nn.Module):
     return x
 
 
-
-net = vgg.VGG(vgg.make_layers(vgg.cfgs["A"]), 
-                  num_classes=10, init_weights=True).to(DEVICE)
-net = Net().to(DEVICE)
+#net = vgg.VGG(vgg.make_layers(vgg.cfgs["A"]), num_classes=10, init_weights=True).to(DEVICE)
+net = models.Convnet2(num_classes=10).to(DEVICE)
 #net = torch.hub.load('pytorch/vision:v0.10.0', 'vgg11', pretrained=False).to(DEVICE)
 
 criterion = nn.CrossEntropyLoss().to(DEVICE)
-optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+net.current_layers = nn.Sequential(*net.incoming_layers).to(DEVICE)
+optimizer = optim.SGD([{"params": net.classifier.parameters()}, {"params": net.current_layers.parameters()}], lr=0.001, momentum=0.9)
 
 num_epochs = 5
 n_total_steps = len(trainloader)

@@ -9,11 +9,11 @@ import torch.nn.functional as F
 
 net = [
       nn.Linear(784, 150),
+      nn.ReLU(),
       nn.Linear(150, 100),
+      nn.ReLU(),
       nn.Linear(100, 50),
-        # 9 : channel: 1024
-        # 10 : channel: 1024
-        # 11 : channel: 10
+      nn.ReLU(),
 ]
 
 class FeedForward(BaseModel):
@@ -25,8 +25,6 @@ class FeedForward(BaseModel):
 
   def forward(self, x):
     out = x.view(x.size(0), -1)
-    for l in self.current_layers:
-      out = l(out)
-      out = F.relu(out)
+    out = self.current_layers(out)
     out = self.classifier(out)
     return out
