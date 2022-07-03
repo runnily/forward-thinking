@@ -116,7 +116,6 @@ class Convnet2(BaseModel):
 
     if init_weights:
       for m in self.modules():
-        print(m)
         if isinstance(m, nn.Conv2d):
           nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
           if m.bias is not None:

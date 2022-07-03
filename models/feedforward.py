@@ -8,12 +8,15 @@ import torch.nn.functional as F
 
 
 net = [
-      nn.Linear(784, 150),
-      nn.ReLU(),
-      nn.Linear(150, 100),
-      nn.ReLU(),
-      nn.Linear(100, 50),
-      nn.ReLU(),
+  nn.Sequential(
+    nn.Linear(784, 150),
+    nn.ReLU()),
+  nn.Sequential(
+    nn.Linear(150, 100),
+    nn.ReLU()),
+  nn.Sequential(
+    nn.Linear(100, 50),
+    nn.ReLU()),
 ]
 
 class FeedForward(BaseModel):
