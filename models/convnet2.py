@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-net = [
+net = nn.Sequential(
         # 0 : size: 24x24, channel: 3
         nn.Conv2d(in_channels=3, out_channels=64, kernel_size=(3,3), padding=1),
         # 1 : kernel: 3x3, channel: 64, padding: 1
@@ -29,7 +29,7 @@ net = [
         # 9 : channel: 1024
         # 10 : channel: 1024
         # 11 : channel: 10
-]
+)
 
 class Convnet2(BaseModel):
 

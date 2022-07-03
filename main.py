@@ -9,12 +9,12 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available()  else 'cpu')
 input_size = 784 
 hidden_size = 512
 num_classes = 100
-num_epochs = 1
+num_epochs = 5
 batch_size = 64
 in_channels = 3 #1
 learning_rate = 0.01
 #model = models.Convnet2BN(num_classes=num_classes, backpropgate=True).to(DEVICE)
-model = models.FeedForward(num_classes=num_classes).to(DEVICE)
+model = models.Convnet2(num_classes=num_classes, backpropgate=True).to(DEVICE)
 class Train():
 
   def __init__(self,  test_loader, train_loader = None, train_data = None, model=model, lr=learning_rate, num_epochs=num_epochs):
@@ -101,7 +101,7 @@ class Train():
       len_self_loader = len(train_loader)
       running_accuracy /= len_self_loader
       running_loss /= len_self_loader
-      print("Test accuracy: {}, Training accuracy: {}".format(test_accuracy, running_accuracy))
+      print("Test accuracy: {}, Training accuracy: {}".format(test_accuracy*100, running_accuracy*100))
       self.__running_time += start.elapsed_time(end) # https://discuss.pytorch.org/t/how-to-measure-time-in-pytorch/26964
       self.recordAccuracy(self.__running_time, epoch, running_loss, test_accuracy, running_accuracy.item())
 
@@ -117,8 +117,8 @@ class Train():
         outputs = self.model(images)
 
         # max returns (value, maximum index value)
-        _, predicted = torch.max(outputs, 1)
-        n_samples += labels.shape[0] # number of samples in current batch
+        _, predicted = torch.max(outputs.data, 1)
+        n_samples += labels.size(0) # number of samples in current batch
         n_correct += (predicted == labels).sum().item() # gets the number of correct
 
     accuracy = n_correct / n_samples
@@ -199,7 +199,7 @@ class Train():
           self.__train([{'params': self.model.classifier.parameters()}], num_epochs, self.classifier_train_loader)
 
 if __name__ == "__main__":
-  train_loader, test_loader, _, _ = utils.MNIST(batch_size=batch_size)
+  train_loader, test_loader, _, _ = utils.SVHN(batch_size=batch_size)
   #_, test_loader, train_data, _ = utils.CIFAR_10()
   train = Train(test_loader, train_loader=train_loader)
   train.add_layers()
