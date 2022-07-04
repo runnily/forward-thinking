@@ -110,9 +110,9 @@ class Convnet2(BaseModel):
 
   def __init__(self, num_classes: int = 10, batch_norm: bool = False, init_weights : bool = True):
     if batch_norm:
-      super().__init__(net_bn, num_classes)
+      super().__init__(net_bn, num_classes, batch_norm = True)
     else:
-      super().__init__(net, num_classes)
+      super().__init__(net, num_classes, batch_norm = True)
 
     if init_weights:
       for m in self.modules():
