@@ -94,8 +94,6 @@ class Train:
         for i, (images, labels) in enumerate(
           train_loader, 0):
           # looping over every batch
-          # get the inputs; data is a list of [inputs, labels]
-
           images = images.to(DEVICE)
           labels = labels.to(DEVICE)
 
@@ -258,7 +256,7 @@ class Train:
 if __name__ == "__main__":
   model = models.Convnet2(num_classes=num_classes, batch_norm=False).to(DEVICE)
   #model = models.FeedForward().to(DEVICE)
-  train_loader, test_loader, _, _ = utils.CIFAR_10(batch_size=batch_size)
+  train_loader, test_loader, _, _ = utils.SVHN(batch_size=batch_size)
   # _, test_loader, train_data, _ = utils.CIFAR_10()
   train = Train(
     model,
