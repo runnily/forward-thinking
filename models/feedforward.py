@@ -21,8 +21,8 @@ net = [
 
 class FeedForward(BaseModel):
 
-  def __init__(self, input_size=784, num_classes=10, backpropgate=False):
-    super(FeedForward, self).__init__(net, num_classes, backpropgate=backpropgate)
+  def __init__(self, input_size : int = 784, num_classes : int = 10, init_weights : bool = True) -> None:
+    super(FeedForward, self).__init__(net, num_classes, init_weights)
     self.incoming_layers[0].in_features = input_size
      
 

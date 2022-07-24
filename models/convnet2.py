@@ -110,22 +110,10 @@ class Convnet2(BaseModel):
 
   def __init__(self, num_classes: int = 10, batch_norm: bool = False, init_weights : bool = True):
     if batch_norm:
-      super().__init__(net_bn, num_classes, batch_norm = True)
+      super().__init__(net_bn, num_classes, batch_norm, init_weights)
     else:
-      super().__init__(net, num_classes, batch_norm = True)
+      super().__init__(net, num_classes, batch_norm, init_weights)
 
-    if init_weights:
-      for m in self.modules():
-        if isinstance(m, nn.Conv2d):
-          nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
-          if m.bias is not None:
-            nn.init.constant_(m.bias, 0)
-        if isinstance(m, nn.BatchNorm2d):
-          nn.init.constant_(m.weight, 1)
-          nn.init.constant_(m.bias, 0)
-        if isinstance(m, nn.Linear):
-          nn.init.normal_(m.weight, 0, 0.01)
-          nn.init.constant_(m.bias, 0)
 
     self.classifier = nn.LazyLinear(num_classes)
 
