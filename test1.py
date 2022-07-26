@@ -48,19 +48,17 @@ class MiniModel(nn.Module):
 
 
 class EnsembleBasedModel(nn.Module):
-    def __init__(self, dataset=CIFAR100(), num_class=100,batch_size=32,epochs=2):
+    def __init__(self, dataset=CIFAR100(), num_classes=100,batch_size=32,epochs=2):
       super(EnsembleBasedModel, self).__init__()
       self.dataset, self.test_dataset = dataset
-      self.test_loader = DataLoader(self.test_dataset, batch_size=batch_size, num_workers=2, shuffle=True)
-      self.num_classes = 100
+      self.test_loader = DataLoader(self.test_dataset, batch_size=batch_size, shuffle=True)
+      self.num_classes = num_classes
       self.models_and_data = {}
       self.createModels(batch_size)
       self.epochs = epochs
 
     def forward(self, x):
-      out = self.models_forward(x)
-      print(out.shape)
-      return out
+      return self.models_forward(x)
 
     def sop(self, y):
       softmax_out = F.softmax(y, 1)
@@ -96,7 +94,7 @@ class EnsembleBasedModel(nn.Module):
       targets = set(self.dataset.targets)
       for target in targets:
         data = Subset(deepcopy(self.dataset), self._getSelectedIndicies(target))
-        labels = data.dataset.targets
+        labels = torch.tensor(data.dataset.targets)
         labels[labels != target] = 0
         labels[labels == target] = 1
         data.dataset.targets = labels
@@ -110,11 +108,11 @@ class EnsembleBasedModel(nn.Module):
 
     def train_inner_models(self, model, batch_data):
       model.train()
-      criterion = nn.CrossEntropyLoss()
+      criterion = nn.CrossEntropyLoss().to(DEVICE)
       optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 
       for epoch in range(self.epochs):
-        for i, (images, labels) in enumerate(batch_data):
+        for images, labels in batch_data:
           images = images.to(DEVICE)
           labels = labels.to(DEVICE)
 
@@ -125,6 +123,9 @@ class EnsembleBasedModel(nn.Module):
           outputs = model(images)
           loss = criterion(outputs, labels)
           loss.backward()
+          
+          #torch.Size([32, 2]) | outputs.shape
+          #torch.Size([32]) | labels.shape
           optimizer.step()
 
         print("Epoch {}, Loss {}".format(epoch, loss.item()))
