@@ -3,14 +3,34 @@ import torch
 from torchvision.transforms import ToTensor, Normalize, Compose, Resize
 import torchvision
 import numpy as np
-from torch.utils.data import DataLoader, Subset, dataloader
+from torch.utils.data import DataLoader, Subset, dataloader, Dataset
 import torch.optim as optim
 import torch.nn.functional as F
-from copy import deepcopy
-from models import Convnet2
 
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+class BinarySubsetDataset(Dataset):
+
+  def __init__(self, dataset, indices, target):
+    self.dataset = dataset
+    self.indices = indices
+    self.target = target
+
+  def __getitem__(self, idx):
+    if isinstance(idx, list):
+      return [self.__expand(self.dataset[self.indices[i]]) for i in idx]
+    return self.__expand(self.dataset[self.indices[idx]])
+  
+  def __expand(self, item):
+    if item[1] != self.target:
+      return (item[0], 0)
+    else:
+      return (item[0], 1)
+    
+  def __len__(self):
+    return len(self.indices)
+
 
 def CIFAR100():
   transform = Compose(
@@ -20,9 +40,9 @@ def CIFAR100():
   test_data = torchvision.datasets.CIFAR10("./data", train=False, download=True, transform=transform)
   return train_data, test_data
 
-class MiniModel(nn.Module):
+class MiniBinaryModel(nn.Module):
   def __init__(self, init_weights : bool = True):
-    super(MiniModel, self).__init__()
+    super(MiniBinaryModel, self).__init__()
     self.features = nn.Sequential(
       nn.Conv2d(in_channels=3, out_channels=64, kernel_size=(3,3)), 
       nn.BatchNorm2d(64),
@@ -53,9 +73,8 @@ class MiniModel(nn.Module):
     x = x.view(x.size(0), -1)
     return self.classifier(x)
 
-
 class EnsembleBasedModel(nn.Module):
-    def __init__(self, dataset=CIFAR100(), num_classes=100,batch_size=32,epochs=5):
+    def __init__(self, dataset=CIFAR100(), num_classes=100,batch_size=64,epochs=10):
       super(EnsembleBasedModel, self).__init__()
       self.dataset, self.test_dataset = dataset
       self.test_loader = DataLoader(self.test_dataset, batch_size=batch_size, shuffle=True)
@@ -65,9 +84,9 @@ class EnsembleBasedModel(nn.Module):
       self.epochs = epochs
 
     def forward(self, x):
-      return self.models_forward(x)
+      return self.ensemble(x)
 
-    def sop(self, y):
+    def configOutput(self, y):
       softmax_out = F.softmax(y, 1)
       if softmax_out.size(0) > 1:
         return [self.maximum(x) for x in softmax_out]
@@ -78,10 +97,10 @@ class EnsembleBasedModel(nn.Module):
         return y[1]
       return 0
 
-    def models_forward(self, x):
+    def ensemble(self, x):
       outputs = []
       for model in self.models_and_data:
-        outputs.append(self.sop(model(x))) 
+        outputs.append(self.configOutput(model(x))) 
       output_tensor = torch.tensor(outputs)
       if output_tensor.size(0) > 1:
         x, y = output_tensor.shape
@@ -91,21 +110,16 @@ class EnsembleBasedModel(nn.Module):
     def _getSelectedIndicies(self, target):
       selected_target_idx = (torch.tensor(self.dataset.targets) == target).nonzero().reshape(-1)
       selected_target_idx_ops = (torch.tensor(self.dataset.targets) != 5).nonzero().reshape(-1)[torch.randperm(len(selected_target_idx))]
-      return torch.cat((selected_target_idx , selected_target_idx_ops))
+      return torch.cat((selected_target_idx,selected_target_idx_ops ))
 
     def createModels(self, batch_size):
       """
         createModels:
           Will create a model for every targets
       """
-      targets = set(self.dataset.targets)
-      for target in targets:
-        data = Subset(deepcopy(self.dataset), self._getSelectedIndicies(target))
-        labels = torch.tensor(data.dataset.targets)
-        labels[labels != target] = 0
-        labels[labels == target] = 1
-        data.dataset.targets = labels
-        model = Convnet2(num_classes=2).to(DEVICE) #MiniModel().to(DEVICE)
+      for _, target in self.dataset.class_to_idx.items(): # should be the same order of test
+        data = BinarySubsetDataset(self.dataset, self._getSelectedIndicies(target), target)
+        model = MiniBinaryModel().to(DEVICE)
         self.models_and_data[model] = DataLoader(data, batch_size=batch_size, shuffle=True)
 
     def train_model(self):
@@ -116,7 +130,7 @@ class EnsembleBasedModel(nn.Module):
     def train_inner_models(self, model, batch_data):
       model.train()
       criterion = nn.CrossEntropyLoss().to(DEVICE)
-      optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+      optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
 
       for epoch in range(self.epochs):
         for images, labels in batch_data:
@@ -149,13 +163,12 @@ class EnsembleBasedModel(nn.Module):
           labels = labels.to(DEVICE)
           outputs = self.forward(images)
           # max returns (value, maximum index value)
-          _, predicted = torch.max(outputs.data, 1)
+          _, predicted = torch.max(outputs.data, 1) 
           n_samples += labels.size(0)  # number of samples in current batch
           n_correct += (
               (predicted.to(DEVICE) == labels).sum().item()
           )  # gets the number of correct
           
-
       accuracy = n_correct / n_samples
       return accuracy
 
