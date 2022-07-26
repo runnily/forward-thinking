@@ -6,7 +6,6 @@ import numpy as np
 from torch.utils.data import DataLoader, Subset, dataloader, Dataset
 import torch.optim as optim
 import torch.nn.functional as F
-from models import Convnet2
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -30,7 +29,6 @@ class BinarySubsetDataset(Dataset):
   def __len__(self):
     return len(self.indices)
 
-
 def CIFAR100():
   transform = Compose(
     [ToTensor(),
@@ -43,20 +41,16 @@ class MiniBinaryModel(nn.Module):
   def __init__(self, init_weights : bool = True, num_classes : int = 2):
     super(MiniBinaryModel, self).__init__()
     self.features = nn.Sequential(
-      nn.Conv2d(3, 6, 5),
+      nn.Conv2d(in_channels=3, out_channels=64, kernel_size=(3,3)), 
+      nn.BatchNorm2d(64),
       nn.ReLU(inplace=True),
-      nn.MaxPool2d(2, 2),
-      nn.Conv2d(6, 16, 5),
+      nn.Conv2d(in_channels=64, out_channels=128, kernel_size=(3,3)), 
+      nn.BatchNorm2d(128),
       nn.ReLU(inplace=True),
+      nn.MaxPool2d(kernel_size=(2,2),stride=2),
     )
-
-    self.classifier = nn.Sequential(
-      nn.Linear(1600, 120),
-      nn.ReLU(inplace=True),
-      nn.Linear(120, 84),
-      nn.ReLU(inplace=True),
-      nn.Linear(84, num_classes),
-    )
+    
+    self.classifier = nn.Linear(25088, 2)
 
     if init_weights:
       for m in self.modules():
@@ -81,6 +75,7 @@ class EnsembleBasedModel(nn.Module):
       super(EnsembleBasedModel, self).__init__()
       self.dataset, self.test_dataset = dataset
       self.test_loader = DataLoader(self.test_dataset, batch_size=batch_size, shuffle=True)
+      self.train_loader = DataLoader(self.dataset, batch_size=batch_size, shuffle=True)
       self.num_classes = num_classes
       self.models_and_data = {}
       self.createModels(batch_size)
@@ -109,7 +104,7 @@ class EnsembleBasedModel(nn.Module):
       if output_tensor.size(0) > 1:
         x, y = output_tensor.shape
         return output_tensor.reshape(y,x)
-      return output_tensor
+      return output_tensor.to(DEVICE)
 
     def _getSelectedIndicies(self, target):
       selected_target_idx = (torch.tensor(self.dataset.targets) == target).nonzero().reshape(-1)
@@ -127,16 +122,16 @@ class EnsembleBasedModel(nn.Module):
         self.models_and_data[model] = DataLoader(data, batch_size=batch_size, shuffle=True)
 
     def train_model(self):
+      #for epochs in range(self.epochs):
       for i, model in enumerate(self.models_and_data):
         batch_data = self.models_and_data[model]
         self._training_model.train(model, batch_data, epochs=1) 
+      #self.train_loader
 
-    
     def test_model(self):
       self._training_model.test()
 
 class TrainAndTest():
-
   def __init__(self, model, loader, epochs):
     self.model = model
     self.loader = loader
