@@ -139,9 +139,8 @@ class EnsembleBasedModel(nn.Module):
       model.eval()
             
     def test_model(self, model=None):
-      model = model if (model) else self
+      model, test_loader = (model, self.models_and_data[model]) if (model) else (self, self.test_loader)
       model.eval()
-      test_loader = self.test_loader if (model == None) else self.models_and_data[model]
       with torch.no_grad():
         n_correct = 0
         n_samples = 0
