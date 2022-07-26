@@ -14,8 +14,8 @@ def CIFAR100():
   transform = Compose(
     [ToTensor(),
      Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-  train_data = torchvision.datasets.CIFAR100("./data", train=True, download=True, transform=transform)
-  test_data = torchvision.datasets.CIFAR100("./data", train=False, download=True, transform=transform)
+  train_data = torchvision.datasets.CIFAR10("./data", train=True, download=True, transform=transform)
+  test_data = torchvision.datasets.CIFAR10("./data", train=False, download=True, transform=transform)
   return train_data, test_data
 
 class MiniModel(nn.Module):
@@ -53,7 +53,7 @@ class MiniModel(nn.Module):
 
 
 class EnsembleBasedModel(nn.Module):
-    def __init__(self, dataset=CIFAR100(), num_classes=100,batch_size=32,epochs=5):
+    def __init__(self, dataset=CIFAR100(), num_classes=100,batch_size=32,epochs=2):
       super(EnsembleBasedModel, self).__init__()
       self.dataset, self.test_dataset = dataset
       self.test_loader = DataLoader(self.test_dataset, batch_size=batch_size, shuffle=True)
@@ -88,7 +88,7 @@ class EnsembleBasedModel(nn.Module):
 
     def _getSelectedIndicies(self, target):
       selected_target_idx = (torch.tensor(self.dataset.targets) == target).nonzero().reshape(-1)
-      selected_target_idx_ops = (torch.tensor(self.dataset.targets) != target).nonzero().reshape(-1)[torch.randperm(500)]
+      selected_target_idx_ops = (torch.tensor(self.dataset.targets) != 5).nonzero().reshape(-1)[torch.randperm(500)]
       return torch.cat((selected_target_idx , selected_target_idx_ops))
 
     def createModels(self, batch_size):
@@ -110,6 +110,7 @@ class EnsembleBasedModel(nn.Module):
       for i, model in enumerate(self.models_and_data):
         batch_data = self.models_and_data[model]
         self.train_inner_models(model, batch_data) # need to train model with full train_data? not just one
+        
 
     def train_inner_models(self, model, batch_data):
       model.train()
@@ -133,24 +134,27 @@ class EnsembleBasedModel(nn.Module):
           #torch.Size([32]) | labels.shape
           optimizer.step()
 
-        print("Epoch {}, Loss {}".format(epoch, loss.item()))
+        print("Epoch {}, Loss {}, Train accuracy {}".format(epoch, loss.item(), self.test_model(model)))
       model.eval()
             
-    def test_model(self):
+    def test_model(self, model=None):
+      model = model if (model) else self
+      model.eval()
+      test_loader = self.test_loader if (not (model)) else self.models_and_data[model]
       with torch.no_grad():
         n_correct = 0
         n_samples = 0
-        for i, (images, labels) in enumerate(self.test_loader):
-          if i == 2:
-            images = images.to(DEVICE)
-            labels = labels.to(DEVICE)
-            outputs = self.forward(images)
-            # max returns (value, maximum index value)
-            _, predicted = torch.max(outputs.data, 1)
-            n_samples += labels.size(0)  # number of samples in current batch
-            n_correct += (
-                (predicted.to(DEVICE) == labels).sum().item()
-            )  # gets the number of correct
+        for i, (images, labels) in enumerate(test_loader):
+          images = images.to(DEVICE)
+          labels = labels.to(DEVICE)
+          outputs = self.forward(images)
+          # max returns (value, maximum index value)
+          _, predicted = torch.max(outputs.data, 1)
+          n_samples += labels.size(0)  # number of samples in current batch
+          n_correct += (
+              (predicted.to(DEVICE) == labels).sum().item()
+          )  # gets the number of correct
+          
 
       accuracy = n_correct / n_samples
       return accuracy
