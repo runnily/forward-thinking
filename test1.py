@@ -6,12 +6,12 @@ import numpy as np
 from torch.utils.data import DataLoader, Subset, dataloader, Dataset
 import torch.optim as optim
 import torch.nn.functional as F
-
+from models import Convnet2
+from main import Train
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class BinarySubsetDataset(Dataset):
-
   def __init__(self, dataset, indices, target):
     self.dataset = dataset
     self.indices = indices
@@ -41,19 +41,23 @@ def CIFAR100():
   return train_data, test_data
 
 class MiniBinaryModel(nn.Module):
-  def __init__(self, init_weights : bool = True):
+  def __init__(self, init_weights : bool = True, num_classes : int = 2):
     super(MiniBinaryModel, self).__init__()
     self.features = nn.Sequential(
-      nn.Conv2d(in_channels=3, out_channels=64, kernel_size=(3,3)), 
-      nn.BatchNorm2d(64),
+      nn.Conv2d(3, 6, 5),
       nn.ReLU(inplace=True),
-      nn.Conv2d(in_channels=64, out_channels=128, kernel_size=(3,3)), 
-      nn.BatchNorm2d(128),
+      nn.MaxPool2d(2, 2),
+      nn.Conv2d(6, 16, 5),
       nn.ReLU(inplace=True),
-      nn.MaxPool2d(kernel_size=(2,2),stride=2),
     )
-    
-    self.classifier = nn.Linear(25088, 2)
+
+    self.classifier = nn.Sequential(
+      nn.Linear(1600, 120),
+      nn.ReLU(inplace=True),
+      nn.Linear(120, 84),
+      nn.ReLU(inplace=True),
+      nn.Linear(84, num_classes),
+    )
 
     if init_weights:
       for m in self.modules():
@@ -119,16 +123,23 @@ class EnsembleBasedModel(nn.Module):
       """
       for _, target in self.dataset.class_to_idx.items(): # should be the same order of test
         data = BinarySubsetDataset(self.dataset, self._getSelectedIndicies(target), target)
-        model = MiniBinaryModel().to(DEVICE)
+        model = Convnet2(num_classes=10).to(DEVICE) #MiniBinaryModel(num_classes=10).to(DEVICE)
         self.models_and_data[model] = DataLoader(data, batch_size=batch_size, shuffle=True)
 
     def train_model(self):
       for i, model in enumerate(self.models_and_data):
         batch_data = self.models_and_data[model]
-        self.train_inner_models(model, batch_data) # need to train model with full train_data? not just one
+        self.train_inner_models(model, batch_data) 
 
     def train_inner_models(self, model, batch_data):
-      model.train()
+      train = Train(
+        model,
+        batch_data, 
+        train_loader=batch_data, 
+        backpropgate=True
+      )
+      train.add_layers()
+      """model.train()
       criterion = nn.CrossEntropyLoss().to(DEVICE)
       optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
 
@@ -136,20 +147,12 @@ class EnsembleBasedModel(nn.Module):
         for images, labels in batch_data:
           images = images.to(DEVICE)
           labels = labels.to(DEVICE)
-
-          # zero the parameter gradients
           optimizer.zero_grad()   
-
-          # forward + backward + optimize
           outputs = model(images)
           loss = criterion(outputs, labels)
           loss.backward()
-          
-          #torch.Size([32, 2]) | outputs.shape
-          #torch.Size([32]) | labels.shape
           optimizer.step()
-
-        print("Epoch {}, Loss {}, Train accuracy {}".format(epoch, loss.item(), self.test_model(model)))
+        print("Epoch {}, Loss {}, Train accuracy {}".format(epoch, loss.item(), self.test_model(model)))"""
       model.eval()
             
     def test_model(self, model=None):
