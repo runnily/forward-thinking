@@ -90,7 +90,7 @@ class EnsembleBasedModel(nn.Module):
 
     def _getSelectedIndicies(self, target):
       selected_target_idx = (torch.tensor(self.dataset.targets) == target).nonzero().reshape(-1)
-      selected_target_idx_ops = (torch.tensor(self.dataset.targets) != 5).nonzero().reshape(-1)[torch.randperm(500)]
+      selected_target_idx_ops = (torch.tensor(self.dataset.targets) != 5).nonzero().reshape(-1)[torch.randperm(len(selected_target_idx))]
       return torch.cat((selected_target_idx , selected_target_idx_ops))
 
     def createModels(self, batch_size):
