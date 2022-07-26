@@ -51,14 +51,16 @@ class EnsembleBasedModel(nn.Module):
     def __init__(self, dataset=CIFAR100(), num_class=100,batch_size=32,epochs=2):
       super(EnsembleBasedModel, self).__init__()
       self.dataset, self.test_dataset = dataset
-      self.test_loader = DataLoader(self.test_dataset, batch_size=batch_size,num_workers=2, shuffle=True)
+      self.test_loader = DataLoader(self.test_dataset, batch_size=batch_size, num_workers=2, shuffle=True)
       self.num_classes = 100
       self.models_and_data = {}
       self.createModels(batch_size)
       self.epochs = epochs
 
     def forward(self, x):
-      return self.models_forward(x)
+      out = self.models_forward(x)
+      print(out.shape)
+      return out
 
     def sop(self, y):
       softmax_out = F.softmax(y, 1)
@@ -93,8 +95,7 @@ class EnsembleBasedModel(nn.Module):
       """
       targets = set(self.dataset.targets)
       for target in targets:
-        selected_target_idx = self._getSelectedIndicies(target) # including a random selection
-        data = Subset(deepcopy(self.dataset), selected_target_idx)
+        data = Subset(deepcopy(self.dataset), self._getSelectedIndicies(target))
         labels = data.dataset.targets
         labels[labels != target] = 0
         labels[labels == target] = 1
@@ -102,14 +103,14 @@ class EnsembleBasedModel(nn.Module):
         model = MiniModel().to(DEVICE)
         self.models_and_data[model] = DataLoader(data, batch_size=batch_size, shuffle=True)
 
-    def train_models(self):
+    def train_model(self):
       for i, model in enumerate(self.models_and_data):
         batch_data = self.models_and_data[model]
-        self.train_a_model(model, batch_data) # need to train model with full train_data? not just one
+        self.train_inner_models(model, batch_data) # need to train model with full train_data? not just one
 
-    def train_a_model(self, model, batch_data):
+    def train_inner_models(self, model, batch_data):
       model.train()
-      criterion = nn.MSELoss()
+      criterion = nn.CrossEntropyLoss()
       optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 
       for epoch in range(self.epochs):
@@ -121,33 +122,34 @@ class EnsembleBasedModel(nn.Module):
           optimizer.zero_grad()   
 
           # forward + backward + optimize
-          outputs = model(images).to(DEVICE)
+          outputs = model(images)
           loss = criterion(outputs, labels)
           loss.backward()
           optimizer.step()
 
-        print("Epoch {}, Loss {}".format(epoch, loss))
+        print("Epoch {}, Loss {}".format(epoch, loss.item()))
       model.eval()
             
     def test_model(self):
       with torch.no_grad():
         n_correct = 0
         n_samples = 0
-        for images, labels in self.test_loader:
-          images = images.to(DEVICE)
-          labels = labels.to(DEVICE)
-          outputs = self.forward(images)
-
-          # max returns (value, maximum index value)
-          """_, predicted = torch.max(outputs.data, 1)
-          n_samples += labels.size(0)  # number of samples in current batch
-          n_correct += (
-              (predicted == labels).sum().item()
-          )  # gets the number of correct"""
+        for i, (images, labels) in enumerate(self.test_loader):
+          if i == 2:
+            images = images.to(DEVICE)
+            labels = labels.to(DEVICE)
+            outputs = self.forward(images)
+            # max returns (value, maximum index value)
+            _, predicted = torch.max(outputs.data, 1)
+            n_samples += labels.size(0)  # number of samples in current batch
+            n_correct += (
+                (predicted.to(DEVICE) == labels).sum().item()
+            )  # gets the number of correct
 
       accuracy = n_correct / n_samples
       return accuracy
 
 if __name__ == "__main__":
   ensemble = EnsembleBasedModel().to(DEVICE)
-  ensemble.test_model()
+  ensemble.train_model()
+  print(ensemble.test_model())
