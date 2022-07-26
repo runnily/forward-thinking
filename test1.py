@@ -7,6 +7,8 @@ from torch.utils.data import DataLoader, Subset, dataloader
 import torch.optim as optim
 import torch.nn.functional as F
 from copy import deepcopy
+from models import Convnet2
+
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -53,7 +55,7 @@ class MiniModel(nn.Module):
 
 
 class EnsembleBasedModel(nn.Module):
-    def __init__(self, dataset=CIFAR100(), num_classes=100,batch_size=32,epochs=2):
+    def __init__(self, dataset=CIFAR100(), num_classes=100,batch_size=32,epochs=5):
       super(EnsembleBasedModel, self).__init__()
       self.dataset, self.test_dataset = dataset
       self.test_loader = DataLoader(self.test_dataset, batch_size=batch_size, shuffle=True)
@@ -103,14 +105,13 @@ class EnsembleBasedModel(nn.Module):
         labels[labels != target] = 0
         labels[labels == target] = 1
         data.dataset.targets = labels
-        model = MiniModel().to(DEVICE)
+        model = Convnet2(num_classes=2).to(DEVICE) #MiniModel().to(DEVICE)
         self.models_and_data[model] = DataLoader(data, batch_size=batch_size, shuffle=True)
 
     def train_model(self):
       for i, model in enumerate(self.models_and_data):
         batch_data = self.models_and_data[model]
         self.train_inner_models(model, batch_data) # need to train model with full train_data? not just one
-        
 
     def train_inner_models(self, model, batch_data):
       model.train()
@@ -140,7 +141,7 @@ class EnsembleBasedModel(nn.Module):
     def test_model(self, model=None):
       model = model if (model) else self
       model.eval()
-      test_loader = self.test_loader if (not (model)) else self.models_and_data[model]
+      test_loader = self.test_loader if (model == None) else self.models_and_data[model]
       with torch.no_grad():
         n_correct = 0
         n_samples = 0
