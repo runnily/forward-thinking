@@ -8,6 +8,7 @@ import numpy as np
 from torch.utils.data import DataLoader, Subset, dataloader
 import torch.optim as optim
 import torch.nn.functional as F
+from copy import deepcopy
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -33,18 +34,31 @@ class EnsembleBasedModel(nn.Module):
     def forward(self, x):
       return self.models_forward(x)
 
-    def maximum(self, y):
-      softmax_out = F.log_softmax(y)
-      if softmax_out[1] >= softmax_out[0]:
-        return softmax_out[1]
-      else:
-        return softmax_out[0]
+    def sop(self, y):
+      softmax_out = F.softmax(y)
+      if softmax_out.shape(0) > 1:
+        return [self.maximum(x) for x in softmax_out]
+      return self.maximum(softmax_out)
+
+    def maximum(self,y):
+      if y[1] >= y[0]:
+        return y[1]
+      return 0
 
     def models_forward(self, x):
       outputs = []
       for model in self.models_and_data:
-        outputs.append(self.maximum(model(x)))
-      return torch.tensor(outputs)
+        outputs.append(self.sop(model(x)))
+      output_tensor = torch.tensor(outputs)
+      if output_tensor.shape(0) > 1:
+        x, y = output_tensor.shape
+        return output_tensor.reshape(y,x)
+      return output_tensor
+
+    def _getSelectedIndicies(self, target):
+      selected_target_idx = (torch.tensor(self.dataset.targets) == target).nonzero().reshape(-1)
+      selected_target_idx_ops = (torch.tensor(self.dataset.targets) != target).nonzero().reshape(-1)[torch.randperm(500)]
+      return torch.cat(selected_target_idx , selected_target_idx_ops)
 
     def createModels(self, batch_size):
       """
@@ -53,8 +67,12 @@ class EnsembleBasedModel(nn.Module):
       """
       targets = set(self.dataset.targets)
       for target in targets:
-        selected_target_idx = torch.tensor(self.dataset.targets) == target # including a random selection
-        data = Subset(self.dataset, selected_target_idx)
+        selected_target_idx = self._getSelectedIndicies(self, target) # including a random selection
+        data = Subset(deepcopy(self.dataset), selected_target_idx)
+        labels = data.dataset.targets
+        labels[labels != target] = 0
+        labels[labels == target] = 1
+        data.dataset.targets = labels
         model = MiniModel()
         self.models_and_data[model] = DataLoader(data, batch_size=batch_size, shuffle=True)
 
@@ -84,6 +102,26 @@ class EnsembleBasedModel(nn.Module):
 
         print("Epoch {}, Loss {}".format(epoch, loss))
             
-    def test_model():
-      pass
+    def test_model(self):
+      self.eval()
+      with torch.no_grad():
+        n_correct = 0
+        n_samples = 0
+        for images, labels in self.test_loader:
+          images = images.to(DEVICE)
+          labels = labels.to(DEVICE)
+          outputs = self.forward(images)
 
+          # max returns (value, maximum index value)
+          """_, predicted = torch.max(outputs.data, 1)
+          n_samples += labels.size(0)  # number of samples in current batch
+          n_correct += (
+              (predicted == labels).sum().item()
+          )  # gets the number of correct"""
+
+      accuracy = n_correct / n_samples
+      return accuracy
+
+if __name__ == "__main__":
+  ensemble = EnsembleBasedModel()
+  ensemble.test_model()
