@@ -10,7 +10,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 input_size = 784
 hidden_size = 512
 num_classes = 10
-num_epochs = 2
+num_epochs = 1
 batch_size = 64
 in_channels = 3  # 1
 learning_rate = 0.01
@@ -54,7 +54,7 @@ class Train:
         self.get_loader[self.model.classifier] = []
 
         num_data_per_layer = int(
-          len(train_data.targets) / self.model.num_classes / len(get_loader)
+          len(train_data.targets) / self.model.num_classes / len(self.get_loader)
         )
         self.get_loader = utils.divide_data_by_group(
           train_data,

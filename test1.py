@@ -7,7 +7,6 @@ from torch.utils.data import DataLoader, Subset, dataloader, Dataset
 import torch.optim as optim
 import torch.nn.functional as F
 from models import Convnet2
-from main import Train
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -86,6 +85,7 @@ class EnsembleBasedModel(nn.Module):
       self.models_and_data = {}
       self.createModels(batch_size)
       self.epochs = epochs
+      self._training_model = TrainAndTest(self.to(DEVICE), self.test_loader, epochs)
 
     def forward(self, x):
       return self.ensemble(x)
@@ -123,57 +123,66 @@ class EnsembleBasedModel(nn.Module):
       """
       for _, target in self.dataset.class_to_idx.items(): # should be the same order of test
         data = BinarySubsetDataset(self.dataset, self._getSelectedIndicies(target), target)
-        model = Convnet2(num_classes=10).to(DEVICE) #MiniBinaryModel(num_classes=10).to(DEVICE)
+        model = MiniBinaryModel(num_classes=2).to(DEVICE)
         self.models_and_data[model] = DataLoader(data, batch_size=batch_size, shuffle=True)
 
     def train_model(self):
       for i, model in enumerate(self.models_and_data):
         batch_data = self.models_and_data[model]
-        self.train_inner_models(model, batch_data) 
+        self._training_model.train(model, batch_data, epochs=1) 
 
-    def train_inner_models(self, model, batch_data):
-      train = Train(
-        model,
-        batch_data, 
-        train_loader=batch_data, 
-        backpropgate=True
-      )
-      train.add_layers()
-      """model.train()
-      criterion = nn.CrossEntropyLoss().to(DEVICE)
-      optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
+    
+    def test_model(self):
+      self._training_model.test()
 
-      for epoch in range(self.epochs):
-        for images, labels in batch_data:
-          images = images.to(DEVICE)
-          labels = labels.to(DEVICE)
-          optimizer.zero_grad()   
-          outputs = model(images)
-          loss = criterion(outputs, labels)
-          loss.backward()
-          optimizer.step()
-        print("Epoch {}, Loss {}, Train accuracy {}".format(epoch, loss.item(), self.test_model(model)))"""
-      model.eval()
-            
-    def test_model(self, model=None):
-      model, test_loader = (model, self.models_and_data[model]) if (model) else (self, self.test_loader)
-      model.eval()
-      with torch.no_grad():
-        n_correct = 0
-        n_samples = 0
-        for i, (images, labels) in enumerate(test_loader):
-          images = images.to(DEVICE)
-          labels = labels.to(DEVICE)
-          outputs = self.forward(images)
-          # max returns (value, maximum index value)
-          _, predicted = torch.max(outputs.data, 1) 
-          n_samples += labels.size(0)  # number of samples in current batch
-          n_correct += (
-              (predicted.to(DEVICE) == labels).sum().item()
-          )  # gets the number of correct
-          
-      accuracy = n_correct / n_samples
-      return accuracy
+class TrainAndTest():
+
+  def __init__(self, model, loader, epochs):
+    self.model = model
+    self.loader = loader
+    self.epochs = epochs
+
+  def train(self, model=None, train_loader=None, epochs=None):
+    model, train_loader, epochs = ( model, train_loader, epochs) if (model and train_loader and epochs) else (self.model, self.loader, self.epochs)
+    n_total_steps = len(train_loader)
+    optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+    criterion = nn.CrossEntropyLoss().to(DEVICE)
+    for epoch in range(epochs): 
+      model.train()
+      for i, (images, labels) in enumerate(
+        train_loader, 0):
+        images = images.to(DEVICE)
+        labels = labels.to(DEVICE)
+        optimizer.zero_grad()  
+        outputs = model(images)
+        loss = criterion(outputs, labels)
+        loss.backward()  
+        optimizer.step()  
+        if (i + 1) % 100 == 0:
+          print(
+            "Epoch [{}/{}], Step [{}/{}], Loss: {:.2f}".format(
+            epoch + 1, epochs, i + 1, n_total_steps, loss.item()
+            )
+          )    
+      print("Test accuracy {}, at epoch: {}".format(self.test(model, train_loader), epoch))
+
+  def test(self, model=None, test_loader=None):
+    model, test_loader = (model, test_loader) if (model and test_loader) else (self.model, self.loader)
+    model.eval()
+    with torch.no_grad():
+      n_correct = 0
+      n_samples = 0
+      for images, labels in test_loader:
+        images = images.to(DEVICE)
+        labels = labels.to(DEVICE)
+        outputs = model(images)
+        _, predicted = torch.max(outputs.data, 1)
+        n_samples += labels.size(0) 
+        n_correct += (
+            (predicted.to(DEVICE) == labels).sum().item()
+        )  
+    accuracy = n_correct / n_samples
+    return accuracy
 
 if __name__ == "__main__":
   ensemble = EnsembleBasedModel().to(DEVICE)
