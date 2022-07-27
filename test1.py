@@ -46,9 +46,10 @@ def CIFAR100():
   test_data = torchvision.datasets.CIFAR10("./data", train=False, download=True, transform=transform)
   return train_data, test_data
 
-class MiniBinaryModel(nn.Module):
+class BinaryBaseModel(nn.Module):
   def __init__(self, init_weights : bool = True, num_classes : int = 1):
-    super(MiniBinaryModel, self).__init__()
+    super(BinaryBaseModel, self).__init__()
+    self.num_classes = num_classes
     self.features = nn.Sequential(
       nn.Conv2d(in_channels=3, out_channels=64, kernel_size=(3,3)), 
       nn.BatchNorm2d(64),
@@ -58,8 +59,6 @@ class MiniBinaryModel(nn.Module):
       nn.ReLU(inplace=True),
       nn.MaxPool2d(kernel_size=(2,2),stride=2),
     )
-    self.num_classes = num_classes
-    
     self.classifier = nn.Linear(25088, num_classes)
 
     if init_weights:
@@ -74,6 +73,23 @@ class MiniBinaryModel(nn.Module):
         if isinstance(m, nn.Linear):
           nn.init.normal_(m.weight, 0, 0.01)
           nn.init.constant_(m.bias, 0)
+
+    def forward(self):
+      # TODO : implement
+      pass
+
+class OneTargetModel(BinaryBaseModel):
+  def __init__(self):
+    super(OneTargetModel, self).__init__(num_classes = 1)
+    
+  def forward(self, x):
+    x = self.features(x)
+    x = x.view(x.size(0), -1)
+    return torch.sigmoid(self.classifier(x))
+
+class TwoTargetModel(BinaryBaseModel):
+  def __init__(self):
+    super(TwoTargetModel, self).__init__(num_classes = 2)
     
   def forward(self, x):
     x = self.features(x)
@@ -102,21 +118,19 @@ class EnsembleBasedModel(nn.Module):
       return self.maximum(softmax_out)
 
     def maximum(self,y):
-      """if y > 0.65:
+      print(y)
+      if y.size(0) > 1:
+        if y[1] >= y[0]:
+          return y[1]
+      elif y > 0.65:
         return y
-      return 0"""
-      if y[1] >= y[0]:
-        return y[1]
       return 0
-
+      
     def ensemble(self, x):
       outputs = []
       for model in self.models_and_data:
         outputs.append(self.configOutput(model(x))) 
       output_tensor = torch.tensor(outputs)
-      print("here")
-      print(output_tensor)
-      print(output_tensor.shape)
       if output_tensor.size(0) > 1:
         x, y = output_tensor.shape
         return output_tensor.reshape(y,x)
@@ -135,7 +149,7 @@ class EnsembleBasedModel(nn.Module):
       for _, target in self.dataset.class_to_idx.items(): # should be the same order of test
         train_data = BinarySubsetDataset(self.dataset, self._getSelectedIndicies(self.dataset, target), target)
         test_data = BinarySubsetDataset(self.test_dataset, self._getSelectedIndicies(self.test_dataset, target), target)
-        model = MiniBinaryModel(num_classes=1).to(DEVICE)
+        model = OneTargetModel().to(DEVICE)
         self.models_and_data[model] = (
           DataLoader(
             train_data, 
@@ -151,8 +165,8 @@ class EnsembleBasedModel(nn.Module):
       #for epochs in range(self.epochs):
       for i, model in enumerate(self.models_and_data):
         data = self.models_and_data[model]
-        self._training_model.train(model, data[1], epochs=5)
-         
+        self._training_model.train(model, data[1], epochs=2)
+      
       #self.train_loader
 
     def test_model(self):
@@ -167,7 +181,7 @@ class TrainAndTest():
   def train(self, model=None, train_loader=None, epochs=None):
     model, train_loader, epochs = ( model, train_loader, epochs) if (model and train_loader and epochs) else (self.model, self.loader, self.epochs)
     n_total_steps = len(train_loader)
-    optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
     criterion = None
     if model.num_classes > 1:
       criterion = nn.CrossEntropyLoss().to(DEVICE)
@@ -180,7 +194,7 @@ class TrainAndTest():
         images = images.to(DEVICE)
         labels = labels.to(DEVICE) if (model.num_classes > 1) else labels.unsqueeze(1).to(DEVICE).to(torch.float32)
         optimizer.zero_grad()  
-        outputs = model(images) if (model.num_classes > 1) else torch.sigmoid(model(images))
+        outputs = model(images)
         loss = criterion(outputs, labels)
         loss.backward()  
         optimizer.step()  
@@ -188,7 +202,7 @@ class TrainAndTest():
           print(
             "Epoch [{}/{}], Step [{}/{}], Loss: {:.2f}".format(
             epoch + 1, epochs, i + 1, n_total_steps, loss.item()
-            )
+          )
         )    
       print("Test accuracy {}, at epoch: {}".format(self.test(model, train_loader), epoch))
 
@@ -205,9 +219,9 @@ class TrainAndTest():
         #print("here")
         #print(labels) 
         _, predicted = torch.max(outputs.data, 1)
-        if model == self.model:
+        if model == self:
           print(labels)
-          print(predicted)
+          print(outputs)
         #print(predicted)
         n_samples += labels.size(0) 
         n_correct += (
@@ -221,4 +235,4 @@ class TrainAndTest():
 if __name__ == "__main__":
   ensemble = EnsembleBasedModel().to(DEVICE)
   ensemble.train_model()
-  #print(ensemble.test_model())
+  print(ensemble.test_model())
