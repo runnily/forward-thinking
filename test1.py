@@ -112,7 +112,7 @@ class EnsembleBasedModel(nn.Module):
       return self.ensemble(x)
 
     def configOutput(self, y):
-      softmax_out = F.softmax(y, 1)
+      softmax_out = F.softmax(y, 1) #<- there might be no need for this
       if softmax_out.size(0) > 1:
         return [self.maximum(x) for x in softmax_out]
       return self.maximum(softmax_out)
@@ -150,7 +150,7 @@ class EnsembleBasedModel(nn.Module):
       for _, target in self.dataset.class_to_idx.items(): # should be the same order of test
         train_data = BinarySubsetDataset(self.dataset, self._getSelectedIndicies(self.dataset, target), target)
         test_data = BinarySubsetDataset(self.test_dataset, self._getSelectedIndicies(self.test_dataset, target, set_size=False), target)
-        model = OneTargetModel().to(DEVICE)
+        model = TwoTargetModel().to(DEVICE)
         self.models_and_data[model] = (
           DataLoader(
             train_data, 
