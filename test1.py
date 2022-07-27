@@ -84,7 +84,7 @@ class OneTargetModel(BinaryBaseModel):
   def forward(self, x):
     x = self.features(x)
     x = x.view(x.size(0), -1)
-    return self.classifier(x)
+    return torch.sigmoid(self.classifier(x))
 
 class TwoTargetModel(BinaryBaseModel):
   def __init__(self):
@@ -135,7 +135,7 @@ class EnsembleBasedModel(nn.Module):
         return output_tensor.reshape(y,x)
       return output_tensor.to(DEVICE)
 
-    def _getSelectedIndicies(self, dataset, target, set_size=False):
+    def _getSelectedIndicies(self, dataset, target, set_size=True):
       selected_target_idx = (torch.tensor(dataset.targets) == target).nonzero().reshape(-1)
       selected_target_idx_ops = (torch.tensor(dataset.targets) != target).nonzero().reshape(-1)
       if set_size:
@@ -150,7 +150,7 @@ class EnsembleBasedModel(nn.Module):
       for _, target in self.dataset.class_to_idx.items(): # should be the same order of test
         train_data = BinarySubsetDataset(self.dataset, self._getSelectedIndicies(self.dataset, target), target)
         test_data = BinarySubsetDataset(self.test_dataset, self._getSelectedIndicies(self.test_dataset, target, set_size=False), target)
-        model = TwoTargetModel().to(DEVICE)
+        model = OneTargetModel().to(DEVICE)
         self.models_and_data[model] = (
           DataLoader(
             train_data, 
@@ -167,7 +167,6 @@ class EnsembleBasedModel(nn.Module):
       for i, model in enumerate(self.models_and_data):
         data = self.models_and_data[model]
         self._training_model.train(model, data, epochs=5)
-        break
       #self.train_loader
 
     def test_model(self):
@@ -188,14 +187,14 @@ class TrainAndTest():
     if model.num_classes > 1:
       criterion = nn.CrossEntropyLoss().to(DEVICE)
     else:
-      criterion = nn.BCEWithLogitsLoss().to(DEVICE)
+      criterion = nn.BCELoss().to(DEVICE)
     for epoch in range(epochs): 
       model.train()
       for i, (images, labels) in enumerate(
         train_loader, 0):
+        optimizer.zero_grad()
         images = images.to(DEVICE)
         labels = labels.to(DEVICE) if (model.num_classes > 1) else labels.unsqueeze(1).to(DEVICE).to(torch.float32)
-        optimizer.zero_grad()  
         outputs = model(images)
         loss = criterion(outputs, labels) # it mights be the outputs are constructed> in that one is one way and the other is the other way
         loss.backward()  
@@ -216,26 +215,28 @@ class TrainAndTest():
       n_samples = 0
       for images, labels in test_loader:
         images = images.to(DEVICE)
-        labels = labels.to(DEVICE)
+        labels = labels.to(DEVICE) if (model.num_classes > 1) else labels.unsqueeze(1).to(DEVICE).to(torch.float32)
         outputs = model(images)
         #print("here")
         #print(labels) 
-        _, predicted = torch.max(outputs.data, 1)
-        """if model == self:"""
-        
+        predictions = None
+        if model.num_classes > 1:
+          _, predictions = torch.max(outputs.data, 1)   
+        else:
+          predictions = torch.round(outputs)
         #print(labels)
-        #print(predicted)
         #print(predicted)
         n_samples += labels.size(0) 
         n_correct += (
-            (predicted.to(DEVICE) == labels).sum().item()
+            (predictions.to(DEVICE) == labels).sum().item()
         )  
         #print(n_correct)
         #print(n_samples)
+        
     accuracy = n_correct / n_samples
     return accuracy
 
 if __name__ == "__main__":
   ensemble = EnsembleBasedModel().to(DEVICE)
   ensemble.train_model()
-  #print(ensemble.test_model())
+  print(ensemble.test_model())
