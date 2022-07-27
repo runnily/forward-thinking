@@ -8,6 +8,12 @@ import torch.optim as optim
 import torch.nn.functional as F
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+transform = Compose(
+    [ToTensor(),
+     Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+test = torchvision.datasets.CIFAR10("./data", train=True, download=True, transform=transform)
+sub_test = Subset(test, (torch.tensor(test.targets) == 1).nonzero().reshape(-1))
+sub_dataloader = DataLoader(sub_test, batch_size=64, shuffle=True)
 
 class BinarySubsetDataset(Dataset):
   def __init__(self, dataset, indices, target):
@@ -129,7 +135,7 @@ class EnsembleBasedModel(nn.Module):
       #self.train_loader
 
     def test_model(self):
-      self._training_model.test()
+      return self._training_model.test()
 
 class TrainAndTest():
   def __init__(self, model, loader, epochs):
@@ -153,16 +159,16 @@ class TrainAndTest():
         loss = criterion(outputs, labels)
         loss.backward()  
         optimizer.step()  
-        if (i + 1) % 100 == 0:
+      """   if (i + 1) % 100 == 0:
           print(
             "Epoch [{}/{}], Step [{}/{}], Loss: {:.2f}".format(
             epoch + 1, epochs, i + 1, n_total_steps, loss.item()
             )
           )    
-      print("Test accuracy {}, at epoch: {}".format(self.test(model, train_loader), epoch))
+      print("Test accuracy {}, at epoch: {}".format(self.test(model, train_loader), epoch))"""
 
   def test(self, model=None, test_loader=None):
-    model, test_loader = (model, test_loader) if (model and test_loader) else (self.model, self.loader)
+    model, test_loader = (model, test_loader) if (model and test_loader) else (self.model, sub_dataloader)
     model.eval()
     with torch.no_grad():
       n_correct = 0
@@ -171,11 +177,16 @@ class TrainAndTest():
         images = images.to(DEVICE)
         labels = labels.to(DEVICE)
         outputs = model(images)
+        #print("here")
+        print(labels) 
         _, predicted = torch.max(outputs.data, 1)
+        print(predicted)
         n_samples += labels.size(0) 
         n_correct += (
             (predicted.to(DEVICE) == labels).sum().item()
         )  
+        #print(n_correct)
+        #print(n_samples)
     accuracy = n_correct / n_samples
     return accuracy
 
