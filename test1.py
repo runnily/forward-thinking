@@ -75,26 +75,26 @@ class BinaryBaseModel(nn.Module):
           nn.init.constant_(m.bias, 0)
 
     def forward(self):
-      # TODO : implement
       pass
 
 class OneTargetModel(BinaryBaseModel):
   def __init__(self):
     super(OneTargetModel, self).__init__(num_classes = 1)
-    
-  def forward(self, x):
-    x = self.features(x)
-    x = x.view(x.size(0), -1)
-    return torch.sigmoid(self.classifier(x))
 
-class TwoTargetModel(BinaryBaseModel):
-  def __init__(self):
-    super(TwoTargetModel, self).__init__(num_classes = 2)
-    
   def forward(self, x):
     x = self.features(x)
     x = x.view(x.size(0), -1)
     return self.classifier(x)
+
+class TwoTargetModel(BinaryBaseModel):
+  def __init__(self):
+    super(TwoTargetModel, self).__init__(num_classes = 2)
+  
+  def forward(self, x):
+    x = self.features(x)
+    x = x.view(x.size(0), -1)
+    return self.classifier(x)
+    
 
 class EnsembleBasedModel(nn.Module):
     def __init__(self, dataset=CIFAR100(), num_classes=100,batch_size=64,epochs=10):
@@ -118,7 +118,6 @@ class EnsembleBasedModel(nn.Module):
       return self.maximum(softmax_out)
 
     def maximum(self,y):
-      print(y)
       if y.size(0) > 1:
         if y[1] >= y[0]:
           return y[1]
@@ -136,9 +135,11 @@ class EnsembleBasedModel(nn.Module):
         return output_tensor.reshape(y,x)
       return output_tensor.to(DEVICE)
 
-    def _getSelectedIndicies(self, dataset, target):
+    def _getSelectedIndicies(self, dataset, target, set_size=False):
       selected_target_idx = (torch.tensor(dataset.targets) == target).nonzero().reshape(-1)
-      selected_target_idx_ops = (torch.tensor(dataset.targets) != 5).nonzero().reshape(-1)[torch.randperm(len(selected_target_idx))]
+      selected_target_idx_ops = (torch.tensor(dataset.targets) != target).nonzero().reshape(-1)
+      if set_size:
+        selected_target_idx_ops = selected_target_idx_ops[torch.randperm(len(selected_target_idx))]
       return torch.cat((selected_target_idx,selected_target_idx_ops ))
 
     def createModels(self, batch_size):
@@ -148,8 +149,8 @@ class EnsembleBasedModel(nn.Module):
       """
       for _, target in self.dataset.class_to_idx.items(): # should be the same order of test
         train_data = BinarySubsetDataset(self.dataset, self._getSelectedIndicies(self.dataset, target), target)
-        test_data = BinarySubsetDataset(self.test_dataset, self._getSelectedIndicies(self.test_dataset, target), target)
-        model = OneTargetModel().to(DEVICE)
+        test_data = BinarySubsetDataset(self.test_dataset, self._getSelectedIndicies(self.test_dataset, target, set_size=False), target)
+        model = TwoTargetModel().to(DEVICE)
         self.models_and_data[model] = (
           DataLoader(
             train_data, 
@@ -165,8 +166,8 @@ class EnsembleBasedModel(nn.Module):
       #for epochs in range(self.epochs):
       for i, model in enumerate(self.models_and_data):
         data = self.models_and_data[model]
-        self._training_model.train(model, data[1], epochs=2)
-      
+        self._training_model.train(model, data, epochs=5)
+        break
       #self.train_loader
 
     def test_model(self):
@@ -180,13 +181,14 @@ class TrainAndTest():
 
   def train(self, model=None, train_loader=None, epochs=None):
     model, train_loader, epochs = ( model, train_loader, epochs) if (model and train_loader and epochs) else (self.model, self.loader, self.epochs)
+    train_loader, test_loader = train_loader if (isinstance(train_loader, tuple)) else (train_loader, train_loader)
     n_total_steps = len(train_loader)
-    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+    optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     criterion = None
     if model.num_classes > 1:
       criterion = nn.CrossEntropyLoss().to(DEVICE)
     else:
-      criterion = nn.BCELoss().to(DEVICE)
+      criterion = nn.BCEWithLogitsLoss().to(DEVICE)
     for epoch in range(epochs): 
       model.train()
       for i, (images, labels) in enumerate(
@@ -195,7 +197,7 @@ class TrainAndTest():
         labels = labels.to(DEVICE) if (model.num_classes > 1) else labels.unsqueeze(1).to(DEVICE).to(torch.float32)
         optimizer.zero_grad()  
         outputs = model(images)
-        loss = criterion(outputs, labels)
+        loss = criterion(outputs, labels) # it mights be the outputs are constructed> in that one is one way and the other is the other way
         loss.backward()  
         optimizer.step()  
         if (i + 1) % 100 == 0:
@@ -204,7 +206,7 @@ class TrainAndTest():
             epoch + 1, epochs, i + 1, n_total_steps, loss.item()
           )
         )    
-      print("Test accuracy {}, at epoch: {}".format(self.test(model, train_loader), epoch))
+      print("Test accuracy {}, at epoch: {}".format(self.test(model, test_loader), epoch))
 
   def test(self, model=None, test_loader=None):
     model, test_loader = (model, test_loader) if (model and test_loader) else (self.model, debugging())
@@ -219,9 +221,10 @@ class TrainAndTest():
         #print("here")
         #print(labels) 
         _, predicted = torch.max(outputs.data, 1)
-        if model == self:
-          print(labels)
-          print(outputs)
+        """if model == self:"""
+        
+        #print(labels)
+        #print(predicted)
         #print(predicted)
         n_samples += labels.size(0) 
         n_correct += (
@@ -235,4 +238,4 @@ class TrainAndTest():
 if __name__ == "__main__":
   ensemble = EnsembleBasedModel().to(DEVICE)
   ensemble.train_model()
-  print(ensemble.test_model())
+  #print(ensemble.test_model())
