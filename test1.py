@@ -13,8 +13,9 @@ def debugging():
   transform = Compose(
       [ToTensor(),
       Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-  test = torchvision.datasets.CIFAR10("./data", train=True, download=True, transform=transform)
-  sub_test = Subset(test, (torch.tensor(test.targets) == 2).nonzero().reshape(-1))
+  test = torchvision.datasets.CIFAR10("./data", train=False, download=True, transform=transform)
+  print(test.class_to_idx)
+  sub_test = Subset(test, (torch.tensor(test.targets) == 7).nonzero().reshape(-1))
   return DataLoader(sub_test, batch_size=64, shuffle=True)
   
 class BinarySubsetDataset(Dataset):
@@ -77,6 +78,9 @@ class BinaryBaseModel(nn.Module):
     def forward(self):
       pass
 
+    def __setattr__(self, name, value):
+      raise AttributeError('''Can't set attribute "{0}"'''.format(name))
+
 class OneTargetModel(BinaryBaseModel):
   def __init__(self):
     super(OneTargetModel, self).__init__(num_classes = 1)
@@ -106,15 +110,19 @@ class EnsembleBasedModel(nn.Module):
       self.models_and_data = {}
       self.createModels(batch_size)
       self.epochs = epochs
-      self._training_model = TrainAndTest(self.to(DEVICE), self.test_loader, epochs)
+      self._training_model = TrainAndTest(self.to(DEVICE), debugging(), epochs)
+      self.__accuracy_of_inner_Models = [0]*10
 
     def forward(self, x):
       return self._ensemble(x)
 
     def _ensemble(self, x):
       outputs = None
-      for model in self.models_and_data:
+      for i, model in enumerate(self.models_and_data):
+        print("model {}".format(i))
         y = model(x)
+        print(torch.sigmoid(y))
+        print(torch.max(y.data,1)[1])
         if y.size(1) > 1:
           y, _ = torch.max(y, dim=1)
           y = y.reshape(1, x.size(0))
@@ -157,8 +165,8 @@ class EnsembleBasedModel(nn.Module):
     def train_model(self):
       #for epochs in range(self.epochs):
       for i, model in enumerate(self.models_and_data):
-        data = self.models_and_data[model]
-        self._training_model.train(model, data, epochs=30)
+        data = self.models_and_data[model][1]
+        self.__accuracy_of_inner_Models[i] += self._training_model.train(model, data, epochs=1) # divide again by self.epochs later
       #self.train_loader
 
     def test_model(self):
@@ -180,8 +188,9 @@ class TrainAndTest():
       criterion = nn.CrossEntropyLoss().to(DEVICE)
     else:
       criterion = nn.BCELoss().to(DEVICE)
+    running_test_accuracy = 0
+    model.train()
     for epoch in range(epochs): 
-      model.train()
       for i, (images, labels) in enumerate(
         train_loader, 0):
         optimizer.zero_grad()
@@ -196,11 +205,15 @@ class TrainAndTest():
             "Epoch [{}/{}], Step [{}/{}], Loss: {:.2f}".format(
             epoch + 1, epochs, i + 1, n_total_steps, loss.item()
           )
-        )    
-      print("Test accuracy {}, at epoch: {}".format(self.test(model, test_loader), epoch))
+        )
+      test_accuracy = self.test(model, test_loader) 
+      running_test_accuracy += test_accuracy
+      print("Test accuracy {}, at epoch: {}".format(test_accuracy, epoch))
+    return running_test_accuracy / epochs
+    model.eval()
 
   def test(self, model=None, test_loader=None):
-    model, test_loader = (model, test_loader) if (model and test_loader) else (self.model, debugging())
+    model, test_loader = (model, test_loader) if (model and test_loader) else (self.model, self.loader)
     model.eval()
     with torch.no_grad():
       n_correct = 0
@@ -209,15 +222,20 @@ class TrainAndTest():
         images = images.to(DEVICE)
         labels = labels.to(DEVICE) if (model.num_classes > 1) else labels.unsqueeze(1).to(DEVICE).to(torch.float32)
         outputs = model(images)
-        #print("here")
-        #print(labels) 
         predictions = None
         if model.num_classes > 1:
           _, predictions = torch.max(outputs.data, 1)   
         else:
           predictions = torch.round(outputs)
-        #print(labels)
-        #print(predicted)
+        if test_loader == self.loader:
+          print("predictions: ")
+          print(labels)
+          print(predictions)
+          """for i, model in enumerate(self.model.models_and_data):
+            print("model {}".format(i))
+            y = model(images)
+            print(torch.sigmoid(y))
+            print(torch.max(y.data,1)[1])"""
         n_samples += labels.size(0) 
         n_correct += (
             (predictions.to(DEVICE) == labels).sum().item()
@@ -231,4 +249,6 @@ class TrainAndTest():
 if __name__ == "__main__":
   ensemble = EnsembleBasedModel().to(DEVICE)
   ensemble.train_model()
+  #test = TrainAndTest(list(ensemble.models_and_data)[7], debugging(), 1)
+  #print(test.test())
   print(ensemble.test_model())
