@@ -109,31 +109,23 @@ class EnsembleBasedModel(nn.Module):
       self._training_model = TrainAndTest(self.to(DEVICE), self.test_loader, epochs)
 
     def forward(self, x):
-      return self.ensemble(x)
+      return self._ensemble(x)
 
-    def configOutput(self, y):
-      softmax_out = F.softmax(y, 1) #<- there might be no need for this
-      if softmax_out.size(0) > 1:
-        return [self.maximum(x) for x in softmax_out]
-      return self.maximum(softmax_out)
-
-    def maximum(self,y):
-      if y.size(0) > 1:
-        if y[1] >= y[0]:
-          return y[1]
-      elif y > 0.65:
-        return y
-      return 0
-      
-    def ensemble(self, x):
-      outputs = []
+    def _ensemble(self, x):
+      outputs = None
       for model in self.models_and_data:
-        outputs.append(self.configOutput(model(x))) 
-      output_tensor = torch.tensor(outputs)
-      if output_tensor.size(0) > 1:
-        x, y = output_tensor.shape
-        return output_tensor.reshape(y,x)
-      return output_tensor.to(DEVICE)
+        y = model(x)
+        if y.size(1) > 1:
+          y, _ = torch.max(y, dim=1)
+          y = y.reshape(1, x.size(0))
+        if outputs != None:
+          outputs = torch.cat((outputs, y))
+        else:
+          outputs = y
+      #outputs, _  = torch.max(outputs, dim=0)
+      #print(outputs)
+      #print(outputs.shape)
+      return torch.transpose(outputs, 0, 1)
 
     def _getSelectedIndicies(self, dataset, target, set_size=True):
       selected_target_idx = (torch.tensor(dataset.targets) == target).nonzero().reshape(-1)
@@ -166,7 +158,7 @@ class EnsembleBasedModel(nn.Module):
       #for epochs in range(self.epochs):
       for i, model in enumerate(self.models_and_data):
         data = self.models_and_data[model]
-        self._training_model.train(model, data, epochs=5)
+        self._training_model.train(model, data, epochs=30)
       #self.train_loader
 
     def test_model(self):
