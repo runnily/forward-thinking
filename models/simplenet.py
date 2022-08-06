@@ -5,8 +5,6 @@ try:
 except:
   from base import BaseModel
 
-
-
 net = nn.Sequential(
         # 0 : kernel: 3x3, out-channel = 64, padding 1
         nn.Sequential(
@@ -177,18 +175,16 @@ net_bn = [
 ]
 
 class SimpleNet(BaseModel):
-
-  def __init__(self, num_classes: int = 10, batch_norm: bool = False, init_weights : bool = True):
+  def __init__(self, 
+    num_classes: int, 
+    batch_norm: bool, 
+    init_weights : bool = True) -> None:
+    in_channels = 3
     if batch_norm:
-      super().__init__(net_bn, num_classes, batch_norm, init_weights)
+      super().__init__(net_bn, num_classes, batch_norm, in_channels, init_weights)
     else:
-      super().__init__(net, num_classes, batch_norm, init_weights)
-
-
+      super().__init__(net, num_classes, batch_norm, in_channels, init_weights)
     self.classifier = nn.LazyLinear(num_classes)
-
-  
-      
 
   def forward(self, x):
     x = self.current_layers(x)

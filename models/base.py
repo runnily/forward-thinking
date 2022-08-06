@@ -3,7 +3,12 @@ import torch.nn as nn
 
 class BaseModel(nn.Module):
 
-  def __init__(self, incoming_layers, num_classes, in_channels: int = 3, batch_norm: bool = False, init_weights: bool = True) -> None:
+  def __init__(self, 
+    incoming_layers: nn.Module, 
+    num_classes: int, 
+    batch_norm: bool, 
+    in_channels: int, 
+    init_weights: bool = True) -> None:
     super(BaseModel, self).__init__()
     self.num_classes = num_classes
     self.batch_norm = batch_norm

@@ -5,28 +5,29 @@ import torch.optim as optim
 from torch.nn.modules import batchnorm
 import utils
 import models
+from torch.utils.data import DataLoader, Dataset
+from typing import Optional
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 input_size = 784
 hidden_size = 512
 num_classes = 10
-num_epochs = 1
+num_epochs = 40
 batch_size = 64
 in_channels = 3  # 1
-learning_rate = 0.01
-
+learning_rate = 0.0001
 
 class Train:
   def __init__(
       self,
-      model,
-      test_loader,
-      train_loader=None,
-      train_data=None,
-      backpropgate=False,
-      freeze_batch_layers=False,
-      lr=learning_rate,
-      num_epochs=num_epochs,
+      model: models.BaseModel,
+      test_loader: DataLoader,
+      train_loader: Optional[DataLoader],
+      train_data: Optional[Dataset],
+      backpropgate: bool,
+      freeze_batch_layers: bool,
+      lr: int,
+      num_epochs: int,
   ) -> None:
       self.model = model
       self.freeze_batch_layers = freeze_batch_layers
@@ -147,13 +148,11 @@ class Train:
           images = images.to(DEVICE)
           labels = labels.to(DEVICE)
           outputs = self.model(images)
-
-          # max returns (value, maximum index value)
           _, predicted = torch.max(outputs.data, 1)
-          n_samples += labels.size(0)  # number of samples in current batch
+          n_samples += labels.size(0)  
           n_correct += (
               (predicted == labels).sum().item()
-          )  # gets the number of correct
+          )  
 
       accuracy = n_correct / n_samples
       return accuracy
@@ -163,9 +162,7 @@ class Train:
         for l in self.model.frozen_layers:
           l.requires_grad_(False)
           if self.model.batch_norm and self.freeze_batch_layers == False:
-            # when freeze_batch_layers is False
-            print("True")
-            l[1].requires_grad_(True) # freeze only conv layer
+            l[1].requires_grad_(True) # freezes only the conv layer
                   
 
   def __getEpochforLayer(
@@ -254,15 +251,25 @@ class Train:
 
 
 if __name__ == "__main__":
-  model = models.Convnet2(num_classes=num_classes, batch_norm=False).to(DEVICE)
+  model = models.SimpleNet(
+    num_classes=num_classes, 
+    batch_norm=False,
+    init_weights=False).to(DEVICE)
   #model = models.FeedForward().to(DEVICE)
-  train_loader, test_loader, _, _ = utils.CIFAR_10(batch_size=batch_size)
+  train_loader, test_loader, _, _ = utils.get_dataset(
+    name="CIFAR10",
+    batch_size=batch_size
+    )
   # _, test_loader, train_data, _ = utils.CIFAR_10()
   train = Train(
-    model,
-    test_loader, 
-    train_loader=train_loader, 
-    backpropgate=True
-    )
+      model = model,
+      test_loader = test_loader,
+      train_loader = train_loader,
+      train_data = None,
+      backpropgate = False,
+      freeze_batch_layers = False,
+      lr = learning_rate,
+      num_epochs = num_epochs)
+  
   train.add_layers()
   train.recordAccuracy.save()
