@@ -1,6 +1,4 @@
-
 class Measure():
-
   def __init__(self,time_elapsed=[], epoch=[], loss=[], test_accuracy=[], train_accuracy=[]):
       self.time_elapsed = time_elapsed
       self.epoch = epoch

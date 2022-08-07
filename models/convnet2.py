@@ -5,8 +5,6 @@ try:
 except:
   from base import BaseModel
 
-
-
 net = nn.Sequential(
         # 0 : size: 24x24, channel: 3
         nn.Sequential(
@@ -107,7 +105,6 @@ net_bn = [
 ]
 
 class Convnet2(BaseModel):
-
   def __init__(self, 
     num_classes: int, 
     batch_norm: bool, 
@@ -124,6 +121,3 @@ class Convnet2(BaseModel):
     x = x.view(x.size(0), -1)
     x = self.classifier(x)
     return x
-
-    
-

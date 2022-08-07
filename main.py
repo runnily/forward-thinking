@@ -25,6 +25,7 @@ if __name__ == '__main__':
   parser.add_argument(
     "--num_classes",
     type=int,
+    help="Choose the number of classes for model"
   )
   # Arguments to use when training
   parser.add_argument(
@@ -95,33 +96,23 @@ if __name__ == '__main__':
     else:
       raise ValueError("Can only perform action with the CIFAR datasets")
 
-  if args.multisource and args.backpropgate:
+  if args.multisource == 1 and args.forward_thinking == 0:
     raise ValueError("Cannot do multisource training without using forward thinking, both must variables be set True")
 
   if args.multisource == 0:
-    if args.multisource == False:
-      train_loader, test_loader = get_dataset(
-          name="CIFAR10",
-          batch_size=batch_size
-        )
-      backpropgate = False if (args.forward_thinking == 1) else True
-      train = TrainWithDataLoader(
-            model = model,
-            train_loader = train_loader,
-            test_loader = test_loader,
-            backpropgate = backpropgate ,
-            freeze_batch_layers = args.freeze_batch_norm_layers,
-            learning_rate = learning_rate,
-            num_epochs = num_epochs)
+    train_loader, test_loader = get_dataset(
+        name="CIFAR10",
+        batch_size=batch_size
+      )
+    backpropgate = False if (args.forward_thinking == 1) else True
+    train = TrainWithDataLoader(
+          model = model,
+          train_loader = train_loader,
+          test_loader = test_loader,
+          backpropgate = backpropgate ,
+          freeze_batch_layers = args.freeze_batch_norm_layers,
+          learning_rate = learning_rate,
+          num_epochs = num_epochs)
 
   train.add_layers()
   train.recordAccuracy.save()
-
-
-
-
-
-
-
-
-

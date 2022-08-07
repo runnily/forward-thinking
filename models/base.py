@@ -1,8 +1,6 @@
 import torch.nn as nn
 
-
 class BaseModel(nn.Module):
-
   def __init__(self, 
     incoming_layers: nn.Module, 
     num_classes: int, 
@@ -35,5 +33,3 @@ class BaseModel(nn.Module):
           nn.init.normal_(m.weight, 0, 0.01)
           nn.init.constant_(m.bias, 0)
     self.classifier = nn.Linear(512, num_classes)
-
-    

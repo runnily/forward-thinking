@@ -1,14 +1,13 @@
-from torch.functional import split
-from torchvision.transforms import ToTensor, Normalize, Compose
-import torchvision
-import torch
-import torch.nn as nn
 import copy
 from typing import Optional, Tuple, List, Dict
-
-from torch.utils.data import DataLoader, Subset, ConcatDataset, Dataset
 from collections.abc import Sequence
+import torch
+import torch.nn as nn
+from torch.functional import split
+from torch.utils.data import DataLoader, Subset, ConcatDataset, Dataset
 from torchvision.datasets import CIFAR100, CIFAR10, MNIST, SVHN
+from torchvision.transforms import ToTensor, Normalize, Compose
+
 
 def get_dataset(name: str, batch_size: int) -> Optional[Tuple[DataLoader, DataLoader]]:
   train_data: Dataset
