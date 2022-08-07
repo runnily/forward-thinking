@@ -6,7 +6,7 @@ from torch.nn.modules import batchnorm
 import utils
 import models
 from torch.utils.data import DataLoader, Dataset
-from typing import Optional
+from typing import Optional, Dict
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 input_size = 784
@@ -18,53 +18,26 @@ in_channels = 3  # 1
 learning_rate = 0.0001
 
 class Train:
-  def __init__(
-      self,
-      model: models.BaseModel,
-      test_loader: DataLoader,
-      train_loader: Optional[DataLoader],
-      train_data: Optional[Dataset],
-      backpropgate: bool,
-      freeze_batch_layers: bool,
-      lr: int,
-      num_epochs: int,
-  ) -> None:
+  """
+  """
+  def __init__(self, 
+    model: models.BaseModel,
+    backpropgate: bool,
+    freeze_batch_layers: bool,
+    learning_rate: int,
+    num_epochs: int,
+    ) -> None:
       self.model = model
       self.freeze_batch_layers = freeze_batch_layers
       self.backpropgate = backpropgate
-      self.train_loader = train_loader
-      self.test_loader = test_loader
-      self.lr = lr
+      self.learning_rate = learning_rate
       self.num_epochs = num_epochs
       self.recordAccuracy = utils.Measure()
       self.__running_time = 0.00
-      self.classifier_train_loader = train_loader
-      save_keys = self.model.incoming_layers
-      self.get_loader = {}
-
-      # if train_loader is defined than uses whole dataset for each layer
-      if train_loader != None and train_data == None:
-        for key in save_keys:
-          self.get_loader[key] = train_loader
-
-      # if no train_loader and train_data is given uses subset of data for each layer
-      if train_data != None and train_loader == None:
-
-        for key in save_keys:
-          self.get_loader[key] = []
-        self.get_loader[self.model.classifier] = []
-
-        num_data_per_layer = int(
-          len(train_data.targets) / self.model.num_classes / len(self.get_loader)
-        )
-        self.get_loader = utils.divide_data_by_group(
-          train_data,
-          num_data_per_layer,
-          batch_size=batch_size,
-          groups=self.get_loader,
-        )
-
-        self.classifier_train_loader = self.get_loader.pop(self.model.classifier)
+      self.get_loader: Dict[nn.Module, DataLoader]
+  
+  def get_train_loader(self, layer: nn.Module) -> DataLoader:
+    pass
 
   def __optimizer(self, parameters_to_be_optimized):
     return optim.SGD(parameters_to_be_optimized, lr=self.lr, momentum=0.9)
@@ -226,7 +199,7 @@ class Train:
           )
           # 4b. Training the model
           self.__train(
-              specific_params_to_be_optimized, num_epochs, self.get_loader[layer]
+              specific_params_to_be_optimized, num_epochs, self.get_train_loader(layer)
           )
           # 5. As we have trained add layer to the frozen_layers
           self.model.frozen_layers.append(self.model.current_layers[-1])
@@ -246,9 +219,66 @@ class Train:
           self.__train(
             [{"params": self.model.classifier.parameters()}],
             num_epochs,
-            self.classifier_train_loader,
+            self.get_train_loader(self.model.classifier),
           )
 
+
+class TrainWithDataLoader(Train):
+  """
+    This is to train with a provided dataloader given
+  """
+  def __init__(
+    self,
+    model: models.BaseModel,
+    backpropgate: bool,
+    freeze_batch_layers: bool,
+    learning_rate: int,
+    num_epochs: int,
+    train_loader: Optional[DataLoader],
+    test_loader: Optional[DataLoader],
+) -> None:
+    super(TrainWithDataLoader, self).__init__(model, backpropgate, freeze_batch_layers, learning_rate, num_epochs)
+    self.train_loader = train_loader
+    self.test_loader = test_loader
+
+  def get_train_loader(self, layer: nn.Module) -> DataLoader:
+    return train_loader
+
+class TrainWithDataSet(Train):
+  """
+    This trains with a provided dataset given
+  """
+  def __init__(
+    self,
+    model: models.BaseModel,
+    train_dataset: Optional[Dataset],
+    test_dataset: Optional[Dataset],
+    backpropgate: bool,
+    freeze_batch_layers: bool,
+    learning_rate: int,
+    num_epochs: int,
+) -> None:
+    super().__init__(model, backpropgate, freeze_batch_layers, learning_rate, num_epochs)
+    self.train_dataset = train_dataset
+    self.test_dataset = test_dataset
+    self.test_loader = DataLoader(test_dataset, batch_size=64,num_workers=2, shuffle=True)
+
+    for layer_key in self.model.incoming_layers:
+        self.get_loader[layer_key] = []
+    self.get_loader[self.model.classifier] = []
+
+    num_data_per_layer = int(
+      len(train_dataset.targets) / self.model.num_classes / len(self.get_loader)
+    )
+    self.get_loader = utils.divide_data_by_group(
+      train_dataset,
+      num_data_per_layer,
+      batch_size=batch_size,
+      groups=self.get_loader,
+    )
+
+  def get_train_loader(self, layer: nn.Module) -> DataLoader:
+    return self.get_loader[layer]
 
 if __name__ == "__main__":
   model = models.SimpleNet(
@@ -256,19 +286,18 @@ if __name__ == "__main__":
     batch_norm=False,
     init_weights=False).to(DEVICE)
   #model = models.FeedForward().to(DEVICE)
-  train_loader, test_loader, _, _ = utils.get_dataset(
+  train_loader, test_loader = utils.get_dataset(
     name="CIFAR10",
     batch_size=batch_size
-    )
+  )
   # _, test_loader, train_data, _ = utils.CIFAR_10()
-  train = Train(
+  train = TrainWithDataLoader(
       model = model,
-      test_loader = test_loader,
       train_loader = train_loader,
-      train_data = None,
+      test_loader = test_loader,
       backpropgate = False,
       freeze_batch_layers = False,
-      lr = learning_rate,
+      learning_rate = learning_rate,
       num_epochs = num_epochs)
   
   train.add_layers()

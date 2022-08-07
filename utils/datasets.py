@@ -2,8 +2,9 @@ from torch.functional import split
 from torchvision.transforms import ToTensor, Normalize, Compose
 import torchvision
 import torch
+import torch.nn as nn
 import copy
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List, Dict
 
 from torch.utils.data import DataLoader, Subset, ConcatDataset, Dataset
 from collections.abc import Sequence
@@ -39,7 +40,7 @@ def divide_data_by_group(
   dataset: Dataset, 
   num_data_per_group: int, 
   batch_size: int, 
-  groups):
+  groups: Dict[nn.Module, List]):
  
   if isinstance(CIFAR100, dataset) or isinstance(CIFAR10, dataset):
     targets = set(dataset.targets)
@@ -62,4 +63,4 @@ def divide_data_by_group(
 def loaders(train_data, test_data, batch_size=128):
   train_loader = DataLoader(train_data, batch_size=batch_size,num_workers=2, shuffle=True)
   test_loader = DataLoader(test_data, batch_size=batch_size,num_workers=2, shuffle=True)
-  return train_loader, test_loader, train_data, test_data
+  return train_loader, test_loader
