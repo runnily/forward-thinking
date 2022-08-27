@@ -36,3 +36,10 @@ class BaseModel(nn.Module):
                     nn.init.normal_(m.weight, 0, 0.01)
                     nn.init.constant_(m.bias, 0)
         self.classifier = nn.Linear(512, num_classes)
+
+def conv_2(in_features, out_features, kernel_size, stride, padding, bias = True, batch_norm=True):
+  conv_2d = nn.Conv2d(in_features, out_features, kernel_size=kernel_size, stride=stride, padding=padding, bias=bias)
+  if batch_norm == True:
+    batch_norm = nn.BatchNorm2d(out_features, eps=1e-05, momentum=0.05, affine=True)
+    return conv_2d, batch_norm
+  return conv_2d
