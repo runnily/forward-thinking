@@ -17,7 +17,6 @@ num_epochs = 5
 batch_size = 64
 in_channels = 3  # 1
 learning_rate = 0.01
-MILESTONES = [60, 120, 160]
 
 
 class Train:
@@ -50,36 +49,12 @@ class Train:
         self.recordAccuracy = utils.Measure()
         self.__running_time = 0.00
         self.get_loader: Optional[Dict[nn.Module, DataLoader]]
-        self.optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=5e-4)
-        self.scheduler = optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=MILESTONES, gamma=0.2)
 
     def get_train_loader(self, layer: nn.Module) -> DataLoader:
         pass
 
-    def _optimizer(self, parameters_to_be_optimized):
-        """
-          This returns an optimiser
-
-          Notes::
-            The functionailty here is to get forward-thinking
-            work with a pytorch scheduler, which allow the lr
-            to decrease. Because parameters are updates being
-            regularly updated (as we add and freeze layers).
-            To allow the sheduler to work we need to modify/
-            update the parameters parameters.
-        """
-        if self.backpropgate == False:
-            for group in self.optimizer.param_groups:
-                if group.get("params", None) != None:
-                    del group["params"]
-                break
-            self.optimizer.param_groups = [group for group in self.optimizer.param_groups if group]
-            self.optimizer.param_groups[0]["params"] = []          
-            for params in parameters_to_be_optimized:
-              self.optimizer.add_param_group(params)
-   
-        return self.optimizer
-        #return optim.SGD(parameters_to_be_optimized, lr=self.learning_rate, momentum=0.9, weight_decay=5e-4)
+    def __optimizer(self, parameters_to_be_optimized):
+        return optim.SGD(parameters_to_be_optimized, lr=self.learning_rate, momentum=0.9)
 
     def __accuracy(self, predictions, labels):
         # https://stackoverflow.com/questions/61696593/accuracy-for-every-epoch-in-pytorch
@@ -88,7 +63,7 @@ class Train:
 
     def __train(self, specific_params_to_be_optimized, num_epochs, train_loader):
         n_total_steps = len(train_loader)
-        optimizer = self._optimizer(specific_params_to_be_optimized)
+        optimizer = self.__optimizer(specific_params_to_be_optimized)
         criterion = nn.CrossEntropyLoss().to(DEVICE)
 
         for epoch in range(num_epochs):
@@ -262,7 +237,6 @@ class TrainWithDataLoader(Train):
     Train.__doc__ += """
         train_loader (nn.DataLoader): This is the train dataloader
         test_loader (nn.DataLoader): This is the test dataloader
-
     Examples::
     `train = TrainWithDataLoader(
         model=model,
@@ -306,7 +280,6 @@ class TrainWithDataSet(Train):
       is divided into different sets. This different sets is used when model is
       training with the forward-thinking method, where each layer is given a corresponding
       dataset to train with.
-
     Examples::
     `train = TrainWithDataLoader(
         model=model,
