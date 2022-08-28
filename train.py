@@ -267,11 +267,27 @@ class TrainWithDataSet(Train):
     def get_train_loader(self, layer: nn.Module) -> DataLoader:
         return self.get_loader[layer]
 
+class TrainResNets(TrainWithDataLoader):
+  
+  def __init__(self,
+    model: models.BaseModel,
+    backpropgate: bool,
+    freeze_batch_layers: bool,
+    learning_rate: int,
+    num_epochs: int,
+    train_loader: Optional[DataLoader],
+    test_loader: Optional[DataLoader],
+  ) -> None:
+      super(TrainWithDataLoader, self).__init__(
+            model, backpropgate, freeze_batch_layers, learning_rate, num_epochs, train_loader, test_loader
+      )
+
 
 if __name__ == "__main__":
-    model = models.SimpleNet(num_classes=num_classes, batch_norm=False, init_weights=False).to(
-        DEVICE
-    )
+    #model = models.SimpleNet(num_classes=num_classes, batch_norm=False, init_weights=False).to(
+        #DEVICE
+    #)
+    model = models.resnet18(batch_norm=False, num_classes=10, init_weights=True)
     # model = models.FeedForward().to(DEVICE)
     train_loader, test_loader = utils.get_dataset(name="CIFAR10", batch_size=batch_size)
     # _, test_loader, train_data, _ = utils.CIFAR_10()

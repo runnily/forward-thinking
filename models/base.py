@@ -17,9 +17,6 @@ class BaseModel(nn.Module):
         self.incoming_layers = incoming_layers
         if len(incoming_layers) == 0:
             raise ValueError("Error cannot be initalized with size 0")
-        else:
-            if isinstance(incoming_layers[0], int):
-                self.incoming_layers = self.make_layers(incoming_layers, batch_norm)
         self.frozen_layers = nn.ModuleList([])
         self.current_layers = nn.Sequential()
 
@@ -42,4 +39,4 @@ def conv_2(in_features, out_features, kernel_size, stride, padding, bias = True,
   if batch_norm == True:
     batch_norm = nn.BatchNorm2d(out_features, eps=1e-05, momentum=0.05, affine=True)
     return conv_2d, batch_norm
-  return conv_2d
+  return [conv_2d]

@@ -1,7 +1,11 @@
-"""resnet in pytorch
+"""
+resnet using forward-thinking
 [1] Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun.
     Deep Residual Learning for Image Recognition
     https://arxiv.org/abs/1512.03385v1
+[2] This model is inspired from https://github.com/runnily/forward-thinking/blob/main/models/resnet.py
+    and https://gist.github.com/liao2000/09fa73d6ee01bed5b1803e0ccda81f6c and is simply built to allow
+    the implementation of the forward-thinking algorthium to train a resnet neural network.
 """
 
 import torch
@@ -21,11 +25,9 @@ class BasicBlock(BaseModel):
     #we use class attribute expansion
     #to distinct
 
-    def __init__(self, in_channels, out_channels, batch_norm, stride=2):
-        super().__init__()
-
+    def __init__(self, in_channels, out_channels, batch_norm, stride=2, init_weights=True):
         #residual function f0, f1
-        self.f0 = nn.Sequential(*conv_2(
+        f0 = nn.Sequential(*conv_2(
             in_channels, 
             out_channels, 
             kernel_size=3, 
@@ -36,6 +38,8 @@ class BasicBlock(BaseModel):
           ),
           nn.ReLU(inplace=True)
         )
+        
+        super().__init__(f0, out_channels, batch_norm, in_channels, init_weights)
 
         self.classifer = nn.Sequential(*conv_2(
             in_channels, 
@@ -56,24 +60,24 @@ class BasicBlock(BaseModel):
         if stride != 1:
             self.shortcut = nn.Sequential(*conv_2(
               in_channels, 
-              out_channels * BasicBlock.expansion, 
+              out_channels, 
               kernel_size=1, 
               stride=stride, 
               padding=0, 
               bias=False, 
               batch_norm=batch_norm
-            ))
+        ))
 
     def forward(self, x):
         return nn.ReLU(inplace=True)(self.classifer(self.current_layers(x)) + self.shortcut(x))
 
-class BottleNeck(nn.Module):
-    """Residual block for resnet over 50 layers
+class BottleNeck(BaseModel):
+    """
+      Residual block for resnet over 50 layers
     """
 
-    def __init__(self, in_channels, out_channels, batch_norm, stride=1):
-        super().__init__()
-        self.residual_function = nn.Sequential(
+    def __init__(self, in_channels, out_channels, batch_norm, stride=1, init_weights=True):
+        f0 = nn.Sequential(
           *conv_2(
             in_channels, 
             out_channels, 
@@ -96,66 +100,68 @@ class BottleNeck(nn.Module):
           nn.ReLU(inplace=True),
         )
 
+        super().__init__(f0, out_channels, batch_norm, in_channels, init_weights)
+
         self.classifer = nn.Sequential(*conv_2(
-            in_channels, 
-            out_channels, 
-            kernel_size=1, 
-            stride=stride, 
-            padding=1, 
-            bias=False, 
-            batch_norm=batch_norm
+          in_channels, 
+          out_channels, 
+          kernel_size=1, 
+          stride=stride, 
+          padding=1, 
+          bias=False, 
+          batch_norm=batch_norm
           )
         )
 
-        self.shortcut = nn.Sequential()
+        self.shortcut = nn.Sequential() # essentially an identify function
 
         if stride != 1:
-            self.shortcut = nn.Sequential(*conv_2(
-              in_channels, 
-              out_channels * BasicBlock.expansion, 
-              kernel_size=1, 
-              stride=stride, 
-              padding=0, 
-              bias=False, 
-              batch_norm=batch_norm
-              )
+          self.shortcut = nn.Sequential(*conv_2(
+            in_channels, 
+            out_channels * BasicBlock.expansion, 
+            kernel_size=1, 
+            stride=stride, 
+            padding=0, 
+            bias=False, 
+            batch_norm=batch_norm
             )
+          )
 
     def forward(self, x):
         return nn.ReLU(inplace=True)(self.classifer(self.current_layers(x))  + self.shortcut(x))
 
-class ResNet(nn.Module):
+class ResNet(BaseModel):
 
-    def __init__(self, block, num_block, batch_norm, num_classes=100):
-        super().__init__()
+    def __init__(self, block, num_block, batch_norm, num_classes=100, init_weights=True):
+      
+      layer_1 = nn.Sequential(
+          *conv_2(3, 64, 
+          kernel_size=3, 
+          stride=1, 
+          padding=1, 
+          bias=False, 
+          batch_norm=batch_norm
+          ),
+          nn.ReLU(inplace=True)
+      )
 
-        self.layer_1 = nn.Sequential(
-            *conv_2(3, 64, 
-            kernel_size=3, 
-            stride=1, 
-            padding=1, 
-            bias=False, 
-            batch_norm=batch_norm
-            ),
-            nn.ReLU(inplace=True)
-          )
+      #we use a different inputsize than the original paper
+      #so conv2_x's stride is 1
+      num_features = [64, 64, 128, 256, 512]
 
-        #we use a different inputsize than the original paper
-        #so conv2_x's stride is 1
-        num_features = [64, 64, 128, 256, 512]
+      if isinstance(block, BottleNeck) == True:
+        num_features = [64, 256, 512, 1024, 2048]
+      
+      layer_2 = self._make_layer(block,  num_features[0], num_features[1], num_block[0], batch_norm, init_weights)
+      layer_3 = self._make_layer(block,  num_features[1], num_features[2], num_block[1], batch_norm, init_weights)
+      layer_4 = self._make_layer(block,  num_features[2], num_features[3], num_block[2], batch_norm, init_weights)
+      layer_5 = self._make_layer(block,  num_features[3], num_features[4], num_block[3], batch_norm, init_weights)
 
-        if isinstance(block, BottleNeck) == True:
-          num_features = [64, 256, 512, 1024, 2048]
-        
-        
-        self.layer_2 = self._make_layer(block,  num_features[0], num_features[1], num_block[0], batch_norm)
-        self.layer_3 = self._make_layer(block,  num_features[1], num_features[2], num_block[1], batch_norm)
-        self.layer_4 = self._make_layer(block,  num_features[2], num_features[3], num_block[2], batch_norm)
-        self.layer_5 = self._make_layer(block,  num_features[3], num_features[4], num_block[3], batch_norm)
-        self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
-        self.classifer = nn.Linear(512 * block.expansion, num_classes)
+      super(ResNet, self).__init__(nn.Sequential(layer_1, layer_2, layer_3, layer_4, layer_5), num_classes, batch_norm, 3, init_weights)
+      self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
+      self.classifer = nn.Linear(num_features[4], num_classes)
 
-    def _make_layer(self, block, in_channels, out_channels, num_blocks, batch_norm):
+    def _make_layer(self, block, in_channels, out_channels, num_blocks, batch_norm, init_weights):
         """make resnet layers(by layer i didnt mean this 'layer' was the
         same as a neuron netowork layer, ex. conv layer), one layer may
         contain more than one residual block
@@ -170,44 +176,40 @@ class ResNet(nn.Module):
 
         # we have num_block blocks per layer, the first block
         # could be 1 or 2, other blocks would always be 1
-        layers = [block(in_channels, out_channels, batch_norm, stride=1)]
+        layers = [block(in_channels, out_channels, batch_norm, stride=1, init_weights=init_weights)]
         for i in range(1, num_blocks):
-            layers.append(block(in_channels, out_channels, batch_norm, stride=2))
+            layers.append(block(in_channels, out_channels, batch_norm, stride=2, init_weights=init_weights))
 
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        output = self.layer_1(x)
-        output = self.layer_2(output)
-        output = self.layer_3(output)
-        output = self.layer_4(output)
-        output = self.layer_5(output)
-        output = self.avg_pool(output)
+        output = self.current_layers(x)
         output = output.view(output.size(0), -1)
         output = self.classifer(output)
         return output
 
-def resnet18():
+def resnet18(batch_norm, num_classes=100, init_weights=True):
     """ return a ResNet 18 object
     """
-    return ResNet(BasicBlock, [2, 2, 2, 2])
+    return ResNet(BasicBlock, [2, 2, 2, 2], batch_norm, num_classes=100, init_weights=True)
 
-def resnet34():
+def resnet34(batch_norm, num_classes=100, init_weights=True):
     """ return a ResNet 34 object
     """
-    return ResNet(BasicBlock, [3, 4, 6, 3])
+    return ResNet(BasicBlock, [3, 4, 6, 3], batch_norm, num_classes=100, init_weights=True)
 
-def resnet50():
+def resnet50(batch_norm, num_classes=100, init_weights=True):
     """ return a ResNet 50 object
     """
-    return ResNet(BottleNeck, [3, 4, 6, 3])
+    return ResNet(BottleNeck, [3, 4, 6, 3],  batch_norm, num_classes=100, init_weights=True)
 
-def resnet101():
+def resnet101(batch_norm, num_classes=100, init_weights=True):
     """ return a ResNet 101 object
     """
     return ResNet(BottleNeck, [3, 4, 23, 3])
 
-def resnet152():
+def resnet152(batch_norm, num_classes=100, init_weights=True):
     """ return a ResNet 152 object
     """
-    return ResNet(BottleNeck, [3, 8, 36, 3])
+    return ResNet(BottleNeck, [3, 8, 36, 3], batch_norm, num_classes=100, init_weights=True)
+    
