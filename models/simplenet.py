@@ -74,8 +74,11 @@ class SimpleNet(BaseModel):
         in_channels = 3
         super().__init__(net, num_classes, batch_norm, in_channels, init_weights)
 
+
+        self.output = nn.LazyLinear(num_classes)
+
     def forward(self, x):
         x = self.current_layers(x)
         x = x.view(x.size(0), -1)
-        x = self.output(x)
+        x = self.classifier(x)
         return x
