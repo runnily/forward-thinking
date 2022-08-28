@@ -34,17 +34,14 @@ class BaseModel(nn.Module):
                     nn.init.constant_(m.bias, 0)
         self.classifier = nn.Linear(512, num_classes)
 
+
 def conv_2d(in_features, out_features, kernel_size, batch_norm, **kwargs):
-    conv_2d = nn.Conv2d(
-        in_features,
-        out_features,
-        kernel_size=kernel_size,
-        **kwargs
-    )
+    conv_2d = nn.Conv2d(in_features, out_features, kernel_size=kernel_size, **kwargs)
     if batch_norm == True:
         batch_norm = nn.BatchNorm2d(out_features, eps=1e-05, momentum=0.05, affine=True)
         return conv_2d, batch_norm
-    return conv_2d,
+    return (conv_2d,)
+
 
 def conv_2d_relu(*args, **kwargs):
-  return (*conv_2d(*args, **kwargs), nn.ReLU())
+    return (*conv_2d(*args, **kwargs), nn.ReLU())
