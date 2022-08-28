@@ -57,29 +57,9 @@ class Train:
         pass
 
     def _optimizer(self, parameters_to_be_optimized):
-        """
-          This returns an optimiser
-
-          Notes::
-            The functionailty here is to get forward-thinking
-            work with a pytorch scheduler, which allow the lr
-            to decrease. Because parameters are updates being
-            regularly updated (as we add and freeze layers).
-            To allow the sheduler to work we need to modify/
-            update the parameters parameters.
-        """
-        if self.backpropgate == False:
-            for group in self.optimizer.param_groups:
-                if group.get("params", None) != None:
-                    del group["params"]
-                break
-            self.optimizer.param_groups = [group for group in self.optimizer.param_groups if group]
-            self.optimizer.param_groups[0]["params"] = []          
-            for params in parameters_to_be_optimized:
-              self.optimizer.add_param_group(params)
-   
-        return self.optimizer
-        #return optim.SGD(parameters_to_be_optimized, lr=self.learning_rate, momentum=0.9, weight_decay=5e-4)
+        if self.backpropgate == True:
+          return self.optimizer
+        return optim.SGD(parameters_to_be_optimized, lr=self.learning_rate, momentum=0.9, weight_decay=5e-4)
 
     def __accuracy(self, predictions, labels):
         # https://stackoverflow.com/questions/61696593/accuracy-for-every-epoch-in-pytorch
