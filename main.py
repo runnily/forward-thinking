@@ -35,6 +35,7 @@ if __name__ == "__main__":
             "simplenet",
             "feedforward",
             "resnet18",
+            "resnet34",
             "resnet50",
             "resnet101",
             "resnet152",
@@ -102,6 +103,10 @@ if __name__ == "__main__":
         model = FeedForward()
     if model_choice == "resnet18":
         model = resnet18(
+            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights
+        )
+    if model_choice == "resnet34":
+        model = resnet34(
             num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights
         )
     if model_choice == "resnet50":
