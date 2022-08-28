@@ -197,7 +197,7 @@ class ResNet(BaseModel):
         )
 
         super(ResNet, self).__init__(
-            nn.Sequential(*layer_1, *layer_2, *layer_3, *layer_4, *layer_5),
+            nn.Sequential(layer_1, *layer_2, *layer_3, *layer_4, *layer_5),
             num_classes,
             batch_norm,
             3,

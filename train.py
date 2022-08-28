@@ -139,8 +139,27 @@ class Train:
                     elif isinstance(l, nn.BatchNorm2d):
                       l.requires_grad_(True)
                       parameters.append({"params" : l.parameters()})
+                    elif isinstance(l, models.BasicBlock):
+                      l.current_layers[1].requires_grad_(True)
+                      parameters.append({"params" : l.current_layers[1].parameters()})
+                      l.output[1].requires_grad_(True)
+                      parameters.append({"params" : l.output[1].parameters()})
+                      if len(l.shortcut) > 1:
+                        l.shortcut[1].requires_grad_(True)
+                        parameters.append({"params" : l.shortcut[1].parameters()})
+                    elif isinstance(l, models.BottleNeck):
+                      l.current_layers[1].requires_grad_(True)
+                      parameters.append({"params" : l.current_layers[1].parameters()})
+                      l.current_layers[4].requires_grad_(True)
+                      parameters.append({"params" : l.current_layers[3].parameters()})
+                      l.output[1].requires_grad_(True)
+                      parameters.append({"params" : l.output[1].parameters()})
+                      if len(l.shortcut) > 1:
+                        l.shortcut[1].requires_grad_(True)
+                        parameters.append({"params" : l.shortcut[1].parameters()})
                     else:
                       pass
+                      
         return parameters
 
     def __getEpochforLayer(
