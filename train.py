@@ -148,7 +148,7 @@ class Train:
                 for i in range(0, idx_layer)
             ]
         specific_params_to_be_optimized.append({"params": layer.parameters()})
-        specific_params_to_be_optimized.append({"params": self.model.classifier.parameters()})
+        specific_params_to_be_optimized.append({"params": self.model.output.parameters()})
         return specific_params_to_be_optimized
 
     def add_layers(self, change_epochs_each_layer=False, epochs_each_layer={}):
@@ -160,7 +160,7 @@ class Train:
                 )
             self.model.current_layers = nn.Sequential(*self.model.incoming_layers).to(DEVICE)
             params = [
-                {"params": self.model.classifier.parameters()},
+                {"params": self.model.output.parameters()},
                 {"params": self.model.current_layers.parameters()},
             ]
             self.__train(params, self.num_epochs, self.train_loader)
@@ -171,9 +171,7 @@ class Train:
                 # 1. Add new layer to model
                 self.model.current_layers.append(layer.to(DEVICE))
                 # 2. diregarded output as output layer is retrained with every new added layer
-                self.model.classifier = nn.LazyLinear(out_features=self.model.num_classes).to(
-                    DEVICE
-                )
+                self.model.output = nn.LazyLinear(out_features=self.model.num_classes).to(DEVICE)
                 # 3. defining parameters to be optimized
                 specific_params_to_be_optimized = self.__defineParas(i, layer)
                 # 4. Train
@@ -196,9 +194,9 @@ class Train:
                 )
                 print("Last layer!!")
                 self.__train(
-                    [{"params": self.model.classifier.parameters()}],
+                    [{"params": self.model.output.parameters()}],
                     num_epochs,
-                    self.get_train_loader(self.model.classifier),
+                    self.get_train_loader(self.model.output),
                 )
 
 
@@ -252,7 +250,7 @@ class TrainWithDataSet(Train):
         self.get_loader = {}
         for layer_key in self.model.incoming_layers:
             self.get_loader[layer_key] = []
-        self.get_loader[self.model.classifier] = []
+        self.get_loader[self.model.output] = []
 
         num_data_per_layer = int(
             len(train_dataset.targets) / self.model.num_classes / len(self.get_loader)

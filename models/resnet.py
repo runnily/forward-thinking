@@ -44,7 +44,7 @@ class BasicBlock(BaseModel):
 
         super().__init__(f0, out_channels, batch_norm, in_channels, init_weights)
 
-        self.classifier = nn.Sequential(
+        self.output = nn.Sequential(
             *conv_2d(
                 out_channels,
                 out_channels,
@@ -76,7 +76,7 @@ class BasicBlock(BaseModel):
         self.current_layers = nn.Sequential(*self.incoming_layers)
 
     def forward(self, x):
-        return nn.ReLU(inplace=True)(self.classifier(self.current_layers(x)) + self.shortcut(x))
+        return nn.ReLU(inplace=True)(self.output(self.current_layers(x)) + self.shortcut(x))
 
 
 class BottleNeck(BaseModel):
@@ -111,7 +111,7 @@ class BottleNeck(BaseModel):
 
         super().__init__(f0, out_channels, batch_norm, in_channels, init_weights)
 
-        self.classifier = nn.Sequential(
+        self.output = nn.Sequential(
             *conv_2d(
                 out_channels_f0,
                 out_channels,
@@ -141,7 +141,7 @@ class BottleNeck(BaseModel):
         self.current_layers = nn.Sequential(*self.incoming_layers)
 
     def forward(self, x):
-        return nn.ReLU(inplace=True)(self.classifier(self.current_layers(x)) + self.shortcut(x))
+        return nn.ReLU(inplace=True)(self.output(self.current_layers(x)) + self.shortcut(x))
 
 
 class ResNet(BaseModel):
@@ -204,7 +204,7 @@ class ResNet(BaseModel):
             init_weights,
         )
         self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
-        self.classifier = nn.LazyLinear(num_features[4], num_classes)
+        self.output = nn.LazyLinear(num_features[4], num_classes)
 
     def _make_layer(
         self, block, in_channels, out_channels, num_blocks, batch_norm, init_weights, stride
@@ -242,7 +242,7 @@ class ResNet(BaseModel):
     def forward(self, x):
         output = self.current_layers(x)
         output = output.view(output.size(0), -1)
-        output = self.classifier(output)
+        output = self.output(output)
         return output
 
 

@@ -23,5 +23,5 @@ class FeedForward(BaseModel):
     def forward(self, x):
         out = x.view(x.size(0), -1)
         out = self.current_layers(out)
-        out = self.classifier(out)
+        out = self.output(out)
         return out

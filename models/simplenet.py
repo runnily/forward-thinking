@@ -77,5 +77,5 @@ class SimpleNet(BaseModel):
     def forward(self, x):
         x = self.current_layers(x)
         x = x.view(x.size(0), -1)
-        x = self.classifier(x)
+        x = self.output(x)
         return x

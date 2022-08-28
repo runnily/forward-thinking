@@ -45,10 +45,10 @@ class Convnet2(BaseModel):
 
         super().__init__(net, num_classes, batch_norm, in_channels, init_weights)
 
-        self.classifier = nn.LazyLinear(num_classes)
+        self.output = nn.LazyLinear(num_classes)
 
     def forward(self, x):
         x = self.current_layers(x)
         x = x.view(x.size(0), -1)
-        x = self.classifier(x)
+        x = self.output(x)
         return x

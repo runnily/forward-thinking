@@ -32,7 +32,7 @@ class BaseModel(nn.Module):
                 if isinstance(m, nn.Linear):
                     nn.init.normal_(m.weight, 0, 0.01)
                     nn.init.constant_(m.bias, 0)
-        self.classifier = nn.Linear(512, num_classes)
+        self.output = nn.Linear(512, num_classes)
 
 
 def conv_2d(in_features, out_features, kernel_size, batch_norm, **kwargs):
