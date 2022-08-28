@@ -12,7 +12,6 @@ import utils
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 input_size = 784
-hidden_size = 512
 num_classes = 10
 num_epochs = 5
 batch_size = 64
@@ -21,7 +20,18 @@ learning_rate = 0.01
 
 
 class Train:
-    """ """
+    """
+    This is a class used for training. This either uses forward-thinking
+    or backpropgation to train the model. The function add_layers() is where
+    the forward-thinking algorithm is applied.
+    Args:
+        model (nn.Module): The model to train
+        backpropgation (Bool): whether to use backpropgation (True) or Forward thinking (False)
+        Freeze_batch_layers (Bool): Utilised in when using forward-thinking to train, whether to 
+                                    (True) freeze batch layers when training or not (False)
+        learning_rate: The learning_rate used to train the algorthium
+        num_epochs: The number of epochs used.
+    """
 
     def __init__(
         self,
@@ -201,8 +211,20 @@ class Train:
 
 
 class TrainWithDataLoader(Train):
-    """
-    This is to train with a provided dataloader given
+    Train.__doc__ += """
+        train_loader (nn.DataLoader): This is the train dataloader
+        test_loader (nn.DataLoader): This is the test dataloader
+
+    Examples::
+    `train = TrainWithDataLoader(
+        model=model,
+        train_loader=train_loader,
+        test_loader=test_loader,
+        backpropgate=False,
+        freeze_batch_layers=False,
+        learning_rate=learning_rate,
+        num_epochs=num_epochs,
+    )`
     """
 
     def __init__(
@@ -227,8 +249,26 @@ class TrainWithDataLoader(Train):
 
 
 class TrainWithDataSet(Train):
-    """
-    This trains with a provided dataset given
+    Train.__doc__ += """
+        train_dataset (nn.DataLoader): This is the train dataset
+        test_dataset (nn.DataLoader): This is the test dataset
+    
+    Notes::
+      This is used when for multiple-source learning where the dataset 
+      is divided into different sets. This different sets is used when model is
+      training with the forward-thinking method, where each layer is given a corresponding
+      dataset to train with.
+
+    Examples::
+    `train = TrainWithDataLoader(
+        model=model,
+        test_dataset=test_dataset,
+        test_dataset=test_dataset,
+        backpropgate=False,
+        freeze_batch_layers=False,
+        learning_rate=learning_rate,
+        num_epochs=num_epochs,
+    )`
     """
 
     def __init__(
@@ -266,32 +306,10 @@ class TrainWithDataSet(Train):
         return self.get_loader[layer]
 
 
-class TrainResNets(TrainWithDataLoader):
-    def __init__(
-        self,
-        model: models.BaseModel,
-        backpropgate: bool,
-        freeze_batch_layers: bool,
-        learning_rate: int,
-        num_epochs: int,
-        train_loader: Optional[DataLoader],
-        test_loader: Optional[DataLoader],
-    ) -> None:
-        super(TrainWithDataLoader, self).__init__(
-            model,
-            backpropgate,
-            freeze_batch_layers,
-            learning_rate,
-            num_epochs,
-            train_loader,
-            test_loader,
-        )
-
-
 if __name__ == "__main__":
-    #model = models.SimpleNet(num_classes=num_classes, batch_norm=False, init_weights=False).to(
-        #DEVICE
-    #)
+    # model = models.Convnet2(num_classes=num_classes, batch_norm=False, init_weights=False).to(
+        # DEVICE
+    # )
     model = models.resnet34(batch_norm=False, num_classes=10, init_weights=True)
     # model = models.FeedForward().to(DEVICE)
     train_loader, test_loader = utils.get_dataset(name="CIFAR10", batch_size=batch_size)
