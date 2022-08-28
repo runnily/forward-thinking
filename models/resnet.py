@@ -39,6 +39,7 @@ class BasicBlock(BaseModel):
           nn.ReLU(inplace=True)
         )
         self.in_channels = in_channels
+        self.out_channels = out_channels
         
         super().__init__(f0, out_channels, batch_norm, in_channels, init_weights)
 
@@ -71,10 +72,6 @@ class BasicBlock(BaseModel):
         self.current_layers = nn.Sequential(*self.incoming_layers)
 
     def forward(self, x):
-        print("here")
-        # a self.shortcut b current layers
-        print(self.classifier(self.current_layers(x)).shape) # torch.Size([128, 64, 32, 32])
-        print(self.shortcut(x)[0].shape) # torch.Size([3, 32, 32])
         return nn.ReLU(inplace=True)(self.classifier(self.current_layers(x)) + self.shortcut(x))
 
 class BottleNeck(BaseModel):
@@ -161,16 +158,16 @@ class ResNet(BaseModel):
       if isinstance(block, BottleNeck) == True:
         num_features = [64, 256, 512, 1024, 2048]
       
-      layer_2 = self._make_layer(block,  num_features[0], num_features[1], num_block[0], batch_norm, init_weights)
-      layer_3 = self._make_layer(block,  num_features[1], num_features[2], num_block[1], batch_norm, init_weights)
-      layer_4 = self._make_layer(block,  num_features[2], num_features[3], num_block[2], batch_norm, init_weights)
-      layer_5 = self._make_layer(block,  num_features[3], num_features[4], num_block[3], batch_norm, init_weights)
+      layer_2 = self._make_layer(block,  num_features[0], num_features[1], num_block[0], batch_norm, init_weights, stride=1)
+      layer_3 = self._make_layer(block,  num_features[1], num_features[2], num_block[1], batch_norm, init_weights, stride=2)
+      layer_4 = self._make_layer(block,  num_features[2], num_features[3], num_block[2], batch_norm, init_weights, stride=2)
+      layer_5 = self._make_layer(block,  num_features[3], num_features[4], num_block[3], batch_norm, init_weights, stride=2)
 
       super(ResNet, self).__init__(nn.Sequential(layer_1, layer_2, layer_3, layer_4, layer_5), num_classes, batch_norm, 3, init_weights)
       self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
       self.classifier = nn.LazyLinear(num_features[4], num_classes)
 
-    def _make_layer(self, block, in_channels, out_channels, num_blocks, batch_norm, init_weights):
+    def _make_layer(self, block, in_channels, out_channels, num_blocks, batch_norm, init_weights, stride):
         """make resnet layers(by layer i didnt mean this 'layer' was the
         same as a neuron netowork layer, ex. conv layer), one layer may
         contain more than one residual block
@@ -182,12 +179,12 @@ class ResNet(BaseModel):
         Return:
             return a resnet layer
         """
-
+        inner_stride = 1 if (stride == 2) else 2
         # we have num_block blocks per layer, the first block
         # could be 1 or 2, other blocks would always be 1
-        layers = [block(in_channels, out_channels, batch_norm, stride=1, init_weights=init_weights)]
+        layers = [block(in_channels, out_channels, batch_norm, stride=stride, init_weights=init_weights)]
         for i in range(1, num_blocks):
-            layers.append(block(out_channels, out_channels, batch_norm, stride=2, init_weights=init_weights))
+            layers.append(block(out_channels, out_channels, batch_norm, stride=inner_stride, init_weights=init_weights))
 
         return nn.Sequential(*layers)
 
