@@ -26,7 +26,7 @@ if __name__ == "__main__":
         choices=["cifar10", "cifar100", "svhn", "mnist"],
         help="Choose a dataset to use",
     )
-    parser.add_argument("--learning_rate", type=float, default=0.01, help="Choose a learning rate")
+    parser.add_argument("--learning_rate", type=float, default=0.01, help="Choose a learning rate ")
     parser.add_argument(
         "--model",
         type=str,
