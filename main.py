@@ -2,7 +2,17 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
 from torchvision.datasets import CIFAR10, CIFAR100
 
-from models import BaseModel, Convnet2, SimpleNet, FeedForward, resnet18, resnet34, resnet50, resnet101, resnet152
+from models import (
+    BaseModel,
+    Convnet2,
+    FeedForward,
+    SimpleNet,
+    resnet18,
+    resnet34,
+    resnet50,
+    resnet101,
+    resnet152,
+)
 from train import Train, TrainWithDataLoader, TrainWithDataSet
 from utils import get_dataset, get_transform
 
@@ -18,7 +28,18 @@ if __name__ == "__main__":
     )
     parser.add_argument("--learning_rate", type=float, default=0.01, help="Choose a learning rate ")
     parser.add_argument(
-        "--model", type=str, choices=["convnet", "simplenet", "feedforward", "resnet18", "resnet50", "resnet101", "resnet152"], help="Choose the model architecture"
+        "--model",
+        type=str,
+        choices=[
+            "convnet",
+            "simplenet",
+            "feedforward",
+            "resnet18",
+            "resnet50",
+            "resnet101",
+            "resnet152",
+        ],
+        help="Choose the model architecture",
     )
     parser.add_argument("--num_classes", type=int, help="Choose the number of classes for model")
     # Arguments to use when training
@@ -65,7 +86,9 @@ if __name__ == "__main__":
     model: BaseModel
     train: Train
 
-    assert (model_choice == "feedforward" and dataset == "MNIST") or (model_choice != "feedforward") , f"The choosen model: {model_choice} is not compatible with the dataset {dataset} "
+    assert (model_choice == "feedforward" and dataset == "MNIST") or (
+        model_choice != "feedforward"
+    ), f"The choosen model: {model_choice} is not compatible with the dataset {dataset} "
 
     if model_choice == "simplenet":
         model = SimpleNet(
@@ -112,7 +135,9 @@ if __name__ == "__main__":
         else:
             raise ValueError("Can only perform action with the CIFAR datasets")
 
-    assert (args.multisource == 1 and args.forward_thinking != 0) or (args.multisource == 0) , f"Cannot do multisource training without using forward thinking. To use multi source set --forward_thinking = 1"
+    assert (args.multisource == 1 and args.forward_thinking != 0) or (
+        args.multisource == 0
+    ), f"Cannot do multisource training without using forward thinking. To use multi source set --forward_thinking = 1"
 
     if args.multisource == 0:
         train_loader, test_loader = get_dataset(name=dataset, batch_size=batch_size)

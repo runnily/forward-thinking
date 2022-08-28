@@ -27,7 +27,7 @@ class Train:
     Args:
         model (nn.Module): The model to train
         backpropgation (Bool): whether to use backpropgation (True) or Forward thinking (False)
-        Freeze_batch_layers (Bool): Utilised in when using forward-thinking to train, whether to 
+        Freeze_batch_layers (Bool): Utilised in when using forward-thinking to train, whether to
                                     (True) freeze batch layers when training or not (False)
         learning_rate: The learning_rate used to train the algorthium
         num_epochs: The number of epochs used.
@@ -308,7 +308,7 @@ class TrainWithDataSet(Train):
 
 if __name__ == "__main__":
     # model = models.Convnet2(num_classes=num_classes, batch_norm=False, init_weights=False).to(
-        # DEVICE
+    # DEVICE
     # )
     model = models.resnet34(batch_norm=False, num_classes=10, init_weights=True)
     # model = models.FeedForward().to(DEVICE)
