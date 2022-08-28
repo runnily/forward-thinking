@@ -17,6 +17,7 @@ num_epochs = 5
 batch_size = 64
 in_channels = 3  # 1
 learning_rate = 0.01
+MILESTONES = [60, 120, 160]
 
 
 class Train:
@@ -49,12 +50,22 @@ class Train:
         self.recordAccuracy = utils.Measure()
         self.__running_time = 0.00
         self.get_loader: Optional[Dict[nn.Module, DataLoader]]
+        self.optimizer = optim.SGD(
+            model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=5e-4
+        )
+        self.scheduler = optim.lr_scheduler.MultiStepLR(
+            self.optimizer, milestones=MILESTONES, gamma=0.2
+        )
 
     def get_train_loader(self, layer: nn.Module) -> DataLoader:
         pass
 
-    def __optimizer(self, parameters_to_be_optimized):
-        return optim.SGD(parameters_to_be_optimized, lr=self.learning_rate, momentum=0.9)
+    def _optimizer(self, parameters_to_be_optimized):
+        if self.backpropgate == True:
+            return self.optimizer
+        return optim.SGD(
+            parameters_to_be_optimized, lr=self.learning_rate, momentum=0.9, weight_decay=5e-4
+        )
 
     def __accuracy(self, predictions, labels):
         # https://stackoverflow.com/questions/61696593/accuracy-for-every-epoch-in-pytorch
@@ -63,7 +74,7 @@ class Train:
 
     def __train(self, specific_params_to_be_optimized, num_epochs, train_loader):
         n_total_steps = len(train_loader)
-        optimizer = self.__optimizer(specific_params_to_be_optimized)
+        optimizer = self._optimizer(specific_params_to_be_optimized)
         criterion = nn.CrossEntropyLoss().to(DEVICE)
 
         for epoch in range(num_epochs):
@@ -127,12 +138,40 @@ class Train:
         accuracy = n_correct / n_samples
         return accuracy
 
-    def freeze_layers_(self):
+    def _freeze_layers(self):
+        parameters = []
         if self.backpropgate == False:
             for l in self.model.frozen_layers:
                 l.requires_grad_(False)
                 if self.model.batch_norm and self.freeze_batch_layers == False:
-                    l[1].requires_grad_(True)  # freezes only the conv layer
+                    if isinstance(l, nn.Sequential) and isinstance(l[1], nn.BatchNorm2d):
+                        l[1].requires_grad_(True)  # freezes only the conv layer
+                        parameters.append({"params": l[1].parameters()})
+                    elif isinstance(l, nn.BatchNorm2d):
+                        l.requires_grad_(True)
+                        parameters.append({"params": l.parameters()})
+                    elif isinstance(l, models.BasicBlock):
+                        l.current_layers[1].requires_grad_(True)
+                        parameters.append({"params": l.current_layers[1].parameters()})
+                        l.output[1].requires_grad_(True)
+                        parameters.append({"params": l.output[1].parameters()})
+                        if len(l.shortcut) > 1:
+                            l.shortcut[1].requires_grad_(True)
+                            parameters.append({"params": l.shortcut[1].parameters()})
+                    elif isinstance(l, models.BottleNeck):
+                        l.current_layers[1].requires_grad_(True)
+                        parameters.append({"params": l.current_layers[1].parameters()})
+                        l.current_layers[4].requires_grad_(True)
+                        parameters.append({"params": l.current_layers[3].parameters()})
+                        l.output[1].requires_grad_(True)
+                        parameters.append({"params": l.output[1].parameters()})
+                        if len(l.shortcut) > 1:
+                            l.shortcut[1].requires_grad_(True)
+                            parameters.append({"params": l.shortcut[1].parameters()})
+                    else:
+                        pass
+
+        return parameters
 
     def __getEpochforLayer(
         self,
@@ -148,15 +187,8 @@ class Train:
                 pass
         return epochs_each_layer.get(layer_key, self.num_epochs)
 
-    def __defineParas(self, idx_layer, layer):
+    def __defineParas(self, idx_layer, layer, specific_params_to_be_optimized=[]):
         # defines specific parameters for layer
-        specific_params_to_be_optimized = []
-        if self.model.batch_norm and self.freeze_batch_layers == False:
-            # when freeze_batch_layers is False add batch_parameters parameters to optimise
-            specific_params_to_be_optimized = [
-                {"params": self.model.current_layers[i][1].parameters()}
-                for i in range(0, idx_layer)
-            ]
         specific_params_to_be_optimized.append({"params": layer.parameters()})
         specific_params_to_be_optimized.append({"params": self.model.output.parameters()})
         return specific_params_to_be_optimized
@@ -177,13 +209,15 @@ class Train:
 
         else:
 
+            parameters = []
+
             for i, layer in enumerate(self.model.incoming_layers):
                 # 1. Add new layer to model
                 self.model.current_layers.append(layer.to(DEVICE))
                 # 2. diregarded output as output layer is retrained with every new added layer
                 self.model.output = nn.LazyLinear(out_features=self.model.num_classes).to(DEVICE)
                 # 3. defining parameters to be optimized
-                specific_params_to_be_optimized = self.__defineParas(i, layer)
+                specific_params_to_be_optimized = self.__defineParas(i, layer, parameters)
                 # 4. Train
                 # 4a. Get the number of epochs
                 num_epochs = self.__getEpochforLayer(i, change_epochs_each_layer, epochs_each_layer)
@@ -194,7 +228,7 @@ class Train:
                 # 5. As we have trained add layer to the frozen_layers
                 self.model.frozen_layers.append(self.model.current_layers[-1])
                 # 6. Freeze layers
-                self.freeze_layers_()
+                parameters = self._freeze_layers()
 
             incoming_layers_len = len(self.model.incoming_layers)
             if self.backpropgate == False and len(self.model.current_layers) == incoming_layers_len:
@@ -214,7 +248,6 @@ class TrainWithDataLoader(Train):
     Train.__doc__ += """
         train_loader (nn.DataLoader): This is the train dataloader
         test_loader (nn.DataLoader): This is the test dataloader
-
     Examples::
     `train = TrainWithDataLoader(
         model=model,
@@ -258,7 +291,6 @@ class TrainWithDataSet(Train):
       is divided into different sets. This different sets is used when model is
       training with the forward-thinking method, where each layer is given a corresponding
       dataset to train with.
-
     Examples::
     `train = TrainWithDataLoader(
         model=model,

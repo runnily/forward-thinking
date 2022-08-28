@@ -1,5 +1,5 @@
 from .base import BaseModel
 from .convnet2 import Convnet2
 from .feedforward import FeedForward
-from .resnet import resnet18, resnet34, resnet50, resnet101, resnet152
+from .resnet import BasicBlock, BottleNeck, resnet18, resnet34, resnet50, resnet101, resnet152
 from .simplenet import SimpleNet
