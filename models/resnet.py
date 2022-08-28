@@ -38,14 +38,15 @@ class BasicBlock(BaseModel):
           ),
           nn.ReLU(inplace=True)
         )
+        self.in_channels = in_channels
         
         super().__init__(f0, out_channels, batch_norm, in_channels, init_weights)
 
-        self.classifer = nn.Sequential(*conv_2(
-            in_channels, 
+        self.classifier = nn.Sequential(*conv_2(
+            out_channels, 
             out_channels, 
             kernel_size=3, 
-            stride=stride, 
+            stride=1, 
             padding=1, 
             bias=False, 
             batch_norm=batch_norm
@@ -67,9 +68,14 @@ class BasicBlock(BaseModel):
               bias=False, 
               batch_norm=batch_norm
         ))
+        self.current_layers = nn.Sequential(*self.incoming_layers)
 
     def forward(self, x):
-        return nn.ReLU(inplace=True)(self.classifer(self.current_layers(x)) + self.shortcut(x))
+        print("here")
+        # a self.shortcut b current layers
+        print(self.classifier(self.current_layers(x)).shape) # torch.Size([128, 64, 32, 32])
+        print(self.shortcut(x)[0].shape) # torch.Size([3, 32, 32])
+        return nn.ReLU(inplace=True)(self.classifier(self.current_layers(x)) + self.shortcut(x))
 
 class BottleNeck(BaseModel):
     """
@@ -77,10 +83,11 @@ class BottleNeck(BaseModel):
     """
 
     def __init__(self, in_channels, out_channels, batch_norm, stride=1, init_weights=True):
+        out_channels_f0 = out_channels//4
         f0 = nn.Sequential(
           *conv_2(
             in_channels, 
-            out_channels, 
+            out_channels_f0, 
             kernel_size=1, 
             stride=stride, 
             padding=1, 
@@ -89,8 +96,8 @@ class BottleNeck(BaseModel):
           ),
           nn.ReLU(inplace=True),
           *conv_2(
-            in_channels, 
-            out_channels, 
+            out_channels_f0, 
+            out_channels_f0, 
             kernel_size=1, 
             stride=stride, 
             padding=1, 
@@ -102,12 +109,12 @@ class BottleNeck(BaseModel):
 
         super().__init__(f0, out_channels, batch_norm, in_channels, init_weights)
 
-        self.classifer = nn.Sequential(*conv_2(
-          in_channels, 
+        self.classifier = nn.Sequential(*conv_2(
+          out_channels_f0, 
           out_channels, 
           kernel_size=1, 
-          stride=stride, 
-          padding=1, 
+          stride=1, 
+          padding=0, 
           bias=False, 
           batch_norm=batch_norm
           )
@@ -118,17 +125,19 @@ class BottleNeck(BaseModel):
         if stride != 1:
           self.shortcut = nn.Sequential(*conv_2(
             in_channels, 
-            out_channels * BasicBlock.expansion, 
+            out_channels_f0, 
             kernel_size=1, 
             stride=stride, 
             padding=0, 
-            bias=False, 
+            bias=True, 
             batch_norm=batch_norm
             )
           )
 
+        self.model.current_layers = nn.Sequential(*self.model.incoming_layers)
+
     def forward(self, x):
-        return nn.ReLU(inplace=True)(self.classifer(self.current_layers(x))  + self.shortcut(x))
+        return nn.ReLU(inplace=True)(self.classifier(self.current_layers(x))  + self.shortcut(x))
 
 class ResNet(BaseModel):
 
@@ -139,7 +148,7 @@ class ResNet(BaseModel):
           kernel_size=3, 
           stride=1, 
           padding=1, 
-          bias=False, 
+          bias=True, 
           batch_norm=batch_norm
           ),
           nn.ReLU(inplace=True)
@@ -159,7 +168,7 @@ class ResNet(BaseModel):
 
       super(ResNet, self).__init__(nn.Sequential(layer_1, layer_2, layer_3, layer_4, layer_5), num_classes, batch_norm, 3, init_weights)
       self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
-      self.classifer = nn.Linear(num_features[4], num_classes)
+      self.classifier = nn.LazyLinear(num_features[4], num_classes)
 
     def _make_layer(self, block, in_channels, out_channels, num_blocks, batch_norm, init_weights):
         """make resnet layers(by layer i didnt mean this 'layer' was the
@@ -178,14 +187,14 @@ class ResNet(BaseModel):
         # could be 1 or 2, other blocks would always be 1
         layers = [block(in_channels, out_channels, batch_norm, stride=1, init_weights=init_weights)]
         for i in range(1, num_blocks):
-            layers.append(block(in_channels, out_channels, batch_norm, stride=2, init_weights=init_weights))
+            layers.append(block(out_channels, out_channels, batch_norm, stride=2, init_weights=init_weights))
 
         return nn.Sequential(*layers)
 
     def forward(self, x):
         output = self.current_layers(x)
         output = output.view(output.size(0), -1)
-        output = self.classifer(output)
+        output = self.classifier(output)
         return output
 
 def resnet18(batch_norm, num_classes=100, init_weights=True):

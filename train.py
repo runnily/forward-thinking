@@ -14,8 +14,8 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 input_size = 784
 hidden_size = 512
 num_classes = 10
-num_epochs = 10
-batch_size = 32
+num_epochs = 1
+batch_size = 128
 in_channels = 3  # 1
 learning_rate = 0.001
 
@@ -281,7 +281,6 @@ class TrainResNets(TrainWithDataLoader):
       super(TrainWithDataLoader, self).__init__(
             model, backpropgate, freeze_batch_layers, learning_rate, num_epochs, train_loader, test_loader
       )
-
 
 if __name__ == "__main__":
     #model = models.SimpleNet(num_classes=num_classes, batch_norm=False, init_weights=False).to(
