@@ -86,8 +86,8 @@ class BottleNeck(BaseModel):
             in_channels, 
             out_channels_f0, 
             kernel_size=1, 
-            stride=stride, 
-            padding=1, 
+            stride=1, 
+            padding=0, 
             bias=False, 
             batch_norm=batch_norm
           ),
@@ -131,7 +131,7 @@ class BottleNeck(BaseModel):
             )
           )
 
-        self.model.current_layers = nn.Sequential(*self.model.incoming_layers)
+        self.current_layers = nn.Sequential(*self.incoming_layers)
 
     def forward(self, x):
         return nn.ReLU(inplace=True)(self.classifier(self.current_layers(x))  + self.shortcut(x))
