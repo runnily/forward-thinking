@@ -12,9 +12,9 @@ import torch
 import torch.nn as nn
 
 try:
-    from .base import BaseModel, conv_2
+    from .base import BaseModel, conv_2d
 except:
-    from base import BaseModel, conv_2
+    from base import BaseModel, conv_2d
 
 
 class BasicBlock(BaseModel):
@@ -28,7 +28,7 @@ class BasicBlock(BaseModel):
     def __init__(self, in_channels, out_channels, batch_norm, stride=2, init_weights=True):
         # residual function f0, f1
         f0 = nn.Sequential(
-            *conv_2(
+            *conv_2d(
                 in_channels,
                 out_channels,
                 kernel_size=3,
@@ -45,7 +45,7 @@ class BasicBlock(BaseModel):
         super().__init__(f0, out_channels, batch_norm, in_channels, init_weights)
 
         self.classifier = nn.Sequential(
-            *conv_2(
+            *conv_2d(
                 out_channels,
                 out_channels,
                 kernel_size=3,
@@ -63,7 +63,7 @@ class BasicBlock(BaseModel):
         # use 1*1 convolution to match the dimension
         if stride != 1:
             self.shortcut = nn.Sequential(
-                *conv_2(
+                *conv_2d(
                     in_channels,
                     out_channels,
                     kernel_size=1,
@@ -87,7 +87,7 @@ class BottleNeck(BaseModel):
     def __init__(self, in_channels, out_channels, batch_norm, stride=1, init_weights=True):
         out_channels_f0 = out_channels // 4
         f0 = nn.Sequential(
-            *conv_2(
+            *conv_2d(
                 in_channels,
                 out_channels_f0,
                 kernel_size=1,
@@ -97,10 +97,10 @@ class BottleNeck(BaseModel):
                 batch_norm=batch_norm,
             ),
             nn.ReLU(inplace=True),
-            *conv_2(
+            *conv_2d(
                 out_channels_f0,
                 out_channels_f0,
-                kernel_size=1,
+                kernel_size=3,
                 stride=stride,
                 padding=1,
                 bias=False,
@@ -112,7 +112,7 @@ class BottleNeck(BaseModel):
         super().__init__(f0, out_channels, batch_norm, in_channels, init_weights)
 
         self.classifier = nn.Sequential(
-            *conv_2(
+            *conv_2d(
                 out_channels_f0,
                 out_channels,
                 kernel_size=1,
@@ -127,9 +127,9 @@ class BottleNeck(BaseModel):
 
         if stride != 1:
             self.shortcut = nn.Sequential(
-                *conv_2(
+                *conv_2d(
                     in_channels,
-                    out_channels_f0,
+                    out_channels,
                     kernel_size=1,
                     stride=stride,
                     padding=0,
@@ -148,7 +148,7 @@ class ResNet(BaseModel):
     def __init__(self, block, num_block, batch_norm, num_classes=100, init_weights=True):
 
         layer_1 = nn.Sequential(
-            *conv_2(3, 64, kernel_size=3, stride=1, padding=1, bias=True, batch_norm=batch_norm),
+            *conv_2d(3, 64, kernel_size=3, stride=1, padding=1, bias=True, batch_norm=batch_norm),
             nn.ReLU(inplace=True),
         )
 
@@ -197,7 +197,7 @@ class ResNet(BaseModel):
         )
 
         super(ResNet, self).__init__(
-            nn.Sequential(layer_1, layer_2, layer_3, layer_4, layer_5),
+            nn.Sequential(*layer_1, *layer_2, *layer_3, *layer_4, *layer_5),
             num_classes,
             batch_norm,
             3,
@@ -223,9 +223,9 @@ class ResNet(BaseModel):
         inner_stride = 1 if (stride == 2) else 2
         # we have num_block blocks per layer, the first block
         # could be 1 or 2, other blocks would always be 1
-        layers = [
+        layers = nn.Sequential(
             block(in_channels, out_channels, batch_norm, stride=stride, init_weights=init_weights)
-        ]
+        )
         for i in range(1, num_blocks):
             layers.append(
                 block(
@@ -237,7 +237,7 @@ class ResNet(BaseModel):
                 )
             )
 
-        return nn.Sequential(*layers)
+        return layers
 
     def forward(self, x):
         output = self.current_layers(x)
