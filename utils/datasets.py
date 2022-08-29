@@ -40,7 +40,6 @@ def divide_data_by_group(
 ) -> Optional[Dict[nn.Module, DataLoader]]:
     targets = set(dataset.targets)
     selected_indices = 0
-    print("here")
     for target in targets:
         selected_target_idx = torch.tensor(dataset.targets) == target
         selected_target_idx = selected_target_idx.nonzero().reshape(-1)

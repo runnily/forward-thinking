@@ -107,8 +107,8 @@ class Train:
             running_accuracy /= len_self_loader
             running_loss /= len_self_loader
             print(
-                "Test accuracy: {}, Training accuracy: {}".format(
-                    test_accuracy * 100, running_accuracy * 100
+                "Epoch {} | Test accuracy {} | Training accuracy: {}".format(
+                    epoch + 1, test_accuracy * 100, running_accuracy * 100
                 )
             )
             self.__running_time += start.elapsed_time(

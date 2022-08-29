@@ -13,6 +13,7 @@ from models import (
 )
 from train import Train, TrainWithDataLoader, TrainWithDataSet
 from utils import get_dataset, get_transform
+from torchvision.datasets import CIFAR10, CIFAR100
 
 if __name__ == "__main__":
     parser = ArgumentParser(
