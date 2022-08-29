@@ -9,6 +9,7 @@ ADD utils /
 ADD main.py /
 ADD train.py /
 ADD README.md /
+ADD tox.ini /
 
 RUN tox
 
