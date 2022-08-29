@@ -8,12 +8,11 @@ resnet using forward-thinking
     the implementation of the forward-thinking algorthium to train a resnet neural network.
 """
 
-import torch
 import torch.nn as nn
 
 try:
     from .base import BaseModel, conv_2d
-except:
+except ImportError:
     from base import BaseModel, conv_2d
 
 
@@ -156,7 +155,7 @@ class ResNet(BaseModel):
         # so conv2_x's stride is 1
         num_features = [64, 64, 128, 256, 512]
 
-        if isinstance(block, BottleNeck) == True:
+        if isinstance(block, BottleNeck) is True:
             num_features = [64, 256, 512, 1024, 2048]
 
         layer_2 = self._make_layer(

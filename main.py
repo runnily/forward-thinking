@@ -1,7 +1,5 @@
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
-from torchvision.datasets import CIFAR10, CIFAR100
-
 from models import (
     BaseModel,
     Convnet2,
@@ -50,13 +48,20 @@ if __name__ == "__main__":
         "--forward_thinking",
         default=1,
         type=int,
-        help="Choose whether you want your model to learn using backpropgate (0) or forwardthinking (1)",
+        help=(
+            "Choose whether you want your model to learn using backpropgate (0) or"
+            " forwardthinking (1)"
+        ),
     )
     parser.add_argument(
         "--multisource",
         default=0,
         type=int,
-        help="If your model trains using forward thinking, Multisource (1) means to have different training data to train each layer or using the same training data to train each layer (0)",
+        help=(
+            "If your model trains using forward thinking, Multisource (1) means to have different"
+            " training data to train each layer or using the same training data to train each"
+            " layer (0)"
+        ),
     )
     parser.add_argument(
         "--init_weights",
@@ -68,13 +73,20 @@ if __name__ == "__main__":
         "--batch_norm",
         default=0,
         type=int,
-        help="Choose whether you want your model to include batch normalisation layers (1) or not (0)",
+        help=(
+            "Choose whether you want your model to include batch normalisation layers (1) or"
+            " not (0)"
+        ),
     )
     parser.add_argument(
         "--freeze_batch_norm_layers",
         default=0,
         type=int,
-        help="If the model architecture your using includes batch normalisation layers and model is using the forward-thinking method to learn choose whether to freeze those batch layers during training",
+        help=(
+            "If the model architecture your using includes batch normalisation layers and model is"
+            " using the forward-thinking method to learn choose whether to freeze those batch"
+            " layers during training"
+        ),
     )
 
     args = parser.parse_args()
@@ -142,7 +154,7 @@ if __name__ == "__main__":
 
     assert (args.multisource == 1 and args.forward_thinking != 0) or (
         args.multisource == 0
-    ), f"Cannot do multisource training without using forward thinking. To use multi source set --forward_thinking = 1"
+    ), "Cannot do multisource training without using forward thinking. To use multi source set --forward_thinking = 1"
 
     if args.multisource == 0:
         train_loader, test_loader = get_dataset(name=dataset, batch_size=batch_size)

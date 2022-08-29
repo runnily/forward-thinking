@@ -35,8 +35,7 @@ class Measure:
         return string
 
     def __clear(self):
-        for array in self.__vals:
-            array = []
+        self.__vals = [[] for array in self.__vals]
 
     def __call__(self, time_elapsed, epoch, loss, test_accuracy, train_accuracy):
         if self.init:
@@ -48,7 +47,6 @@ class Measure:
 
     def save(self, filename="accuracy.csv"):
         try:
-            title = ["Epoch", "Time Elapsed", "Loss", "Train accuracy", "Test accuracy"]
             csv_text = "epoch,time_elapsed,loss,train_accuracy,test_accuracy\n"
             csv_rows = [
                 "{},{},{},{},{}".format(x, y, z, i, k) for x, y, z, i, k in zip(*self.__vals)
@@ -57,5 +55,5 @@ class Measure:
             with open("utils/recorded-accuracy/" + filename, "w") as f:
                 f.write(csv_text)
             return True
-        except:
+        except Exception:
             return False

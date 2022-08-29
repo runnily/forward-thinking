@@ -1,11 +1,8 @@
-import copy
-from collections.abc import Sequence
 from typing import Dict, List, Optional, Tuple
 
 import torch
 import torch.nn as nn
-from torch.functional import split
-from torch.utils.data import ConcatDataset, DataLoader, Dataset, Subset
+from torch.utils.data import DataLoader, Dataset, Subset
 from torchvision.datasets import CIFAR10, CIFAR100, MNIST, SVHN
 from torchvision.transforms import Compose, Normalize, ToTensor
 

@@ -1,10 +1,9 @@
 try:
     from .base import BaseModel
-except:
+except ImportError:
     from base import BaseModel
 
 import torch.nn as nn
-import torch.nn.functional as F
 
 net = [
     nn.Sequential(nn.Linear(784, 150), nn.ReLU()),

@@ -1,9 +1,8 @@
 import torch.nn as nn
-import torch.nn.functional as F
 
 try:
     from .base import BaseModel, conv_2d_relu
-except:
+except ImportError:
     from base import BaseModel, conv_2d_relu
 
 

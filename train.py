@@ -1,8 +1,8 @@
+import random
 from typing import Dict, Optional
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 from torch.nn.modules import batchnorm
 from torch.utils.data import DataLoader, Dataset
@@ -61,7 +61,7 @@ class Train:
         pass
 
     def _optimizer(self, parameters_to_be_optimized):
-        if self.backpropgate == True:
+        if self.backpropgate is True:
             return self.optimizer
         return optim.SGD(
             parameters_to_be_optimized, lr=self.learning_rate, momentum=0.9, weight_decay=5e-4
@@ -140,34 +140,34 @@ class Train:
 
     def _freeze_layers(self):
         parameters = []
-        if self.backpropgate == False:
-            for l in self.model.frozen_layers:
-                l.requires_grad_(False)
-                if self.model.batch_norm and self.freeze_batch_layers == False:
-                    if isinstance(l, nn.Sequential) and isinstance(l[1], nn.BatchNorm2d):
-                        l[1].requires_grad_(True)  # freezes only the conv layer
-                        parameters.append({"params": l[1].parameters()})
-                    elif isinstance(l, nn.BatchNorm2d):
-                        l.requires_grad_(True)
-                        parameters.append({"params": l.parameters()})
-                    elif isinstance(l, models.BasicBlock):
-                        l.current_layers[1].requires_grad_(True)
-                        parameters.append({"params": l.current_layers[1].parameters()})
-                        l.output[1].requires_grad_(True)
-                        parameters.append({"params": l.output[1].parameters()})
-                        if len(l.shortcut) > 1:
-                            l.shortcut[1].requires_grad_(True)
-                            parameters.append({"params": l.shortcut[1].parameters()})
-                    elif isinstance(l, models.BottleNeck):
-                        l.current_layers[1].requires_grad_(True)
-                        parameters.append({"params": l.current_layers[1].parameters()})
-                        l.current_layers[4].requires_grad_(True)
-                        parameters.append({"params": l.current_layers[3].parameters()})
-                        l.output[1].requires_grad_(True)
-                        parameters.append({"params": l.output[1].parameters()})
-                        if len(l.shortcut) > 1:
-                            l.shortcut[1].requires_grad_(True)
-                            parameters.append({"params": l.shortcut[1].parameters()})
+        if self.backpropgate is False:
+            for layer in self.model.frozen_layers:
+                layer.requires_grad_(False)
+                if self.model.batch_norm and self.freeze_batch_layers is False:
+                    if isinstance(layer, nn.Sequential) and isinstance(layer[1], nn.BatchNorm2d):
+                        layer[1].requires_grad_(True)  # freezes only the conv layer
+                        parameters.append({"params": layer[1].parameters()})
+                    elif isinstance(layer, nn.BatchNorm2d):
+                        layer.requires_grad_(True)
+                        parameters.append({"params": layer.parameters()})
+                    elif isinstance(layer, models.BasicBlock):
+                        layer.current_layers[1].requires_grad_(True)
+                        parameters.append({"params": layer.current_layers[1].parameters()})
+                        layer.output[1].requires_grad_(True)
+                        parameters.append({"params": layer.output[1].parameters()})
+                        if len(layer.shortcut) > 1:
+                            layer.shortcut[1].requires_grad_(True)
+                            parameters.append({"params": layer.shortcut[1].parameters()})
+                    elif isinstance(layer, models.BottleNeck):
+                        layer.current_layers[1].requires_grad_(True)
+                        parameters.append({"params": layer.current_layers[1].parameters()})
+                        layer.current_layers[4].requires_grad_(True)
+                        parameters.append({"params": layer.current_layers[3].parameters()})
+                        layer.output[1].requires_grad_(True)
+                        parameters.append({"params": layer.output[1].parameters()})
+                        if len(layer.shortcut) > 1:
+                            layer.shortcut[1].requires_grad_(True)
+                            parameters.append({"params": layer.shortcut[1].parameters()})
                     else:
                         pass
 
@@ -183,8 +183,8 @@ class Train:
         if change_epochs_each_layer:
             try:
                 return int(input("Number of epoch for layer {} ".format(layer_key)))
-            except:
-                pass
+            except ValueError:
+                print("Oops!  That was no valid number.  Try again...")
         return epochs_each_layer.get(layer_key, self.num_epochs)
 
     def __defineParas(self, idx_layer, layer, specific_params_to_be_optimized=[]):
@@ -195,10 +195,11 @@ class Train:
 
     def add_layers(self, change_epochs_each_layer=False, epochs_each_layer={}):
 
-        if self.backpropgate == True:
-            if self.get_loader != None:
+        if self.backpropgate is True:
+            if self.get_loader is not None:
                 raise ValueError(
-                    "You cannot backpropgate when there are different train sets defined for each layer"
+                    "You cannot backpropgate when there are different train sets defined for each"
+                    " layer"
                 )
             self.model.current_layers = nn.Sequential(*self.model.incoming_layers).to(DEVICE)
             params = [
@@ -231,7 +232,7 @@ class Train:
                 parameters = self._freeze_layers()
 
             incoming_layers_len = len(self.model.incoming_layers)
-            if self.backpropgate == False and len(self.model.current_layers) == incoming_layers_len:
+            if self.backpropgate is False and len(self.model.current_layers) == incoming_layers_len:
                 # This part is for training the last layers
                 num_epochs = self.__getEpochforLayer(
                     incoming_layers_len, change_epochs_each_layer, epochs_each_layer
@@ -246,8 +247,8 @@ class Train:
 
 class TrainWithDataLoader(Train):
     Train.__doc__ += """
-        train_loader (nn.DataLoader): This is the train dataloader
-        test_loader (nn.DataLoader): This is the test dataloader
+            train_loader (nn.DataLoader): This is the train dataloader
+            test_loader (nn.DataLoader): This is the test dataloader
     Examples::
     `train = TrainWithDataLoader(
         model=model,
@@ -283,8 +284,8 @@ class TrainWithDataLoader(Train):
 
 class TrainWithDataSet(Train):
     Train.__doc__ += """
-        train_dataset (nn.DataLoader): This is the train dataset
-        test_dataset (nn.DataLoader): This is the test dataset
+            train_dataset (nn.DataLoader): This is the train dataset
+            test_dataset (nn.DataLoader): This is the test dataset
     
     Notes::
       This is used when for multiple-source learning where the dataset 
