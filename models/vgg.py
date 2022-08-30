@@ -24,18 +24,20 @@ class VGG(BaseModel):
     def __init__(self, features, num_classes, batch_norm, init_weights):
 
         in_channels = 3
+        features.append(
+            nn.Sequential(
+            nn.Linear(512, 4096),
+            nn.ReLU(inplace=True),
+            nn.Dropout()))
+        features.append(
+            nn.Sequential(
+            nn.Linear(4096, 4096),
+            nn.ReLU(inplace=True),
+            nn.Dropout()))
         
         super().__init__(features, num_classes, batch_norm, in_channels, init_weights)
 
-        self.output = nn.Sequential(
-            nn.Linear(512, 4096),
-            nn.ReLU(inplace=True),
-            nn.Dropout(),
-            nn.Linear(4096, 4096),
-            nn.ReLU(inplace=True),
-            nn.Dropout(),
-            nn.Linear(4096, num_classes)
-        )
+        self.output = nn.Linear(4096, num_classes)
 
     def forward(self, x):
         output = self.current_layers(x)
@@ -57,7 +59,7 @@ def make_layers(cfg, batch_norm=False):
         seq_layer.append(nn.Conv2d(input_channel, layer, kernel_size=3, padding=1))
 
         if batch_norm:
-            seq_layer.append(nn.BatchNorm2d(layer))
+            seq_layer.append(nn.BatchNorm2d(layer, eps=1e-05, momentum=0.05, affine=True))
 
         seq_layer.append(nn.ReLU(inplace=True))
         layers.append(seq_layer)

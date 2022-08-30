@@ -71,7 +71,7 @@ class Train:
         # https://stackoverflow.com/questions/61696593/accuracy-for-every-epoch-in-pytorch
         classes = torch.argmax(predictions, dim=1)
         return torch.mean((classes == labels).float())  # needs mean for each batch size
-
+    
     def __train(self, specific_params_to_be_optimized, num_epochs, train_loader):
         n_total_steps = len(train_loader)
         optimizer = self._optimizer(specific_params_to_be_optimized)
@@ -326,7 +326,7 @@ class TrainWithDataSet(Train):
         self.get_loader[self.model.output] = []
 
         num_data_per_layer = int(
-            len(train_dataset.targets) / self.model.num_classes / len(self.get_loader)
+            len(train_dataset.targets) / self.model.num_classes
         )
         self.get_loader = utils.divide_data_by_group(
             train_dataset,
@@ -335,7 +335,11 @@ class TrainWithDataSet(Train):
             groups=self.get_loader,
         )
 
+        self.loader_for_last_layer = list(self.get_loader.values())[-1]
+
     def get_train_loader(self, layer: nn.Module) -> DataLoader:
+        if layer not in self.get_loader:
+            return self.loader_for_last_layer
         return self.get_loader[layer]
 
 
