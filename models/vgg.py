@@ -1,8 +1,5 @@
 """vgg in pytorch
-
-
 [1] Karen Simonyan, Andrew Zisserman
-
     Very Deep Convolutional Networks for Large-Scale Image Recognition.
     https://arxiv.org/abs/1409.1556v6
 """
@@ -79,4 +76,4 @@ def vgg16(batch_norm, num_classes=100, init_weights=True):
 
 def vgg19(batch_norm, num_classes=100, init_weights=True):
     return VGG(make_layers(cfg['E'], batch_norm),  num_classes, batch_norm, init_weights)
-
+    
