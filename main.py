@@ -1,5 +1,7 @@
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
+from torchvision.datasets import CIFAR10, CIFAR100
+
 from models import (
     BaseModel,
     Convnet2,
@@ -10,14 +12,13 @@ from models import (
     resnet50,
     resnet101,
     resnet152,
-    vgg11, 
-    vgg13, 
-    vgg16, 
-    vgg19
+    vgg11,
+    vgg13,
+    vgg16,
+    vgg19,
 )
 from train import Train, TrainWithDataLoader, TrainWithDataSet
 from utils import get_dataset, get_transform
-from torchvision.datasets import CIFAR10, CIFAR100
 
 if __name__ == "__main__":
     parser = ArgumentParser(
@@ -42,9 +43,9 @@ if __name__ == "__main__":
             "resnet50",
             "resnet101",
             "resnet152",
-            "vgg11", 
-            "vgg13", 
-            "vgg16", 
+            "vgg11",
+            "vgg13",
+            "vgg16",
             "vgg19",
         ],
         help="Choose the model architecture",
