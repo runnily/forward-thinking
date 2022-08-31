@@ -51,10 +51,10 @@ def divide_data_by_group(
             groups[group] += group_target_idx
         selected_indices = 0
     groups_data_loader = {}
-
     for group in groups:
-        data = Subset(dataset, groups[group])
-        groups_data_loader[group] = DataLoader(data, batch_size=batch_size, shuffle=True)
+        if len(groups[group]) > 0:
+            data = Subset(dataset, groups[group])
+            groups_data_loader[group] = DataLoader(data, batch_size=batch_size, shuffle=True)
     return groups_data_loader
 
 

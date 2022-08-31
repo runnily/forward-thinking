@@ -325,9 +325,7 @@ class TrainWithDataSet(Train):
             self.get_loader[layer_key] = []
         self.get_loader[self.model.output] = []
 
-        num_data_per_layer = int(
-            len(train_dataset.targets) / self.model.num_classes / len(self.get_loader)
-        )
+        num_data_per_layer = int(len(train_dataset.targets) / self.model.num_classes)
         self.get_loader = utils.divide_data_by_group(
             train_dataset,
             num_data_per_layer,
@@ -335,7 +333,11 @@ class TrainWithDataSet(Train):
             groups=self.get_loader,
         )
 
+        self.loader_for_last_layer = list(self.get_loader.values())[-1]
+
     def get_train_loader(self, layer: nn.Module) -> DataLoader:
+        if layer not in self.get_loader:
+            return self.loader_for_last_layer
         return self.get_loader[layer]
 
 

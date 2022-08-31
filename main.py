@@ -1,5 +1,7 @@
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
+from torchvision.datasets import CIFAR10, CIFAR100
+
 from models import (
     BaseModel,
     Convnet2,
@@ -10,10 +12,13 @@ from models import (
     resnet50,
     resnet101,
     resnet152,
+    vgg11,
+    vgg13,
+    vgg16,
+    vgg19,
 )
 from train import Train, TrainWithDataLoader, TrainWithDataSet
 from utils import get_dataset, get_transform
-from torchvision.datasets import CIFAR10, CIFAR100
 
 if __name__ == "__main__":
     parser = ArgumentParser(
@@ -38,6 +43,10 @@ if __name__ == "__main__":
             "resnet50",
             "resnet101",
             "resnet152",
+            "vgg11",
+            "vgg13",
+            "vgg16",
+            "vgg19",
         ],
         help="Choose the model architecture",
     )
@@ -132,6 +141,22 @@ if __name__ == "__main__":
         )
     if model_choice == "resnet152":
         model = resnet152(
+            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights
+        )
+    if model_choice == "vgg11":
+        model = vgg11(
+            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights
+        )
+    if model_choice == "vgg13":
+        model = vgg13(
+            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights
+        )
+    if model_choice == "vgg16":
+        model = vgg16(
+            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights
+        )
+    if model_choice == "vgg19":
+        model = vgg19(
             num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights
         )
 
