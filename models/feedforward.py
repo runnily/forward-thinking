@@ -5,19 +5,17 @@ except ImportError:
 
 import torch.nn as nn
 
-net = [
-    nn.Sequential(nn.Linear(784, 150), nn.ReLU()),
-    nn.Sequential(nn.Linear(150, 100), nn.ReLU()),
-    nn.Sequential(nn.Linear(100, 50), nn.ReLU()),
-]
-
 
 class FeedForward(BaseModel):
     def __init__(
         self, input_size: int = 784, num_classes: int = 10, init_weights: bool = True
     ) -> None:
-        super(FeedForward, self).__init__(net, num_classes, init_weights, in_channels=1)
-        self.incoming_layers[0].in_features = input_size
+        super(FeedForward, self).__init__([
+          nn.Sequential(nn.Linear(input_size, 150), nn.ReLU()),
+          nn.Sequential(nn.Linear(150, 100), nn.ReLU()),
+          nn.Sequential(nn.Linear(100, 50), nn.ReLU()),
+        ], num_classes, init_weights, in_channels=1)
+        self.output = nn.LazyLinear(num_classes)
 
     def forward(self, x):
         out = x.view(x.size(0), -1)

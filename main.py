@@ -98,6 +98,15 @@ if __name__ == "__main__":
             " layers during training"
         ),
     )
+    parser.add_argument(
+        "--filename",
+        default="accuracy",
+        type=str,
+        help=(
+            "where to save the metrics logs (accuracy etc). All files will be saved as .csv types"
+            "in the utils/recorded-accuracy folder"
+        ),
+    )
 
     args = parser.parse_args()
     dataset = args.dataset.upper()
@@ -105,6 +114,7 @@ if __name__ == "__main__":
     learning_rate = args.learning_rate
     num_epochs = args.epochs
     model_choice = args.model.lower()
+    filename = args.filename.lower()
 
     model: BaseModel
     train: Train
@@ -196,4 +206,4 @@ if __name__ == "__main__":
         )
 
     train.add_layers()
-    train.recordAccuracy.save()
+    train.recordAccuracy.save(filename)

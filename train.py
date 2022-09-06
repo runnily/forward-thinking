@@ -79,10 +79,13 @@ class Train:
 
         for epoch in range(num_epochs):
             self.model.train()
+            if self.backpropgate is True:
+                  self.scheduler.step()
             running_loss = 0.00
             running_accuracy = 0.00
-            start = torch.cuda.Event(enable_timing=True)
-            start.record()
+            if torch.cuda.is_available() is True:
+              start = torch.cuda.Event(enable_timing=True)
+              start.record()
             for i, (images, labels) in enumerate(train_loader, 0):
                 images = images.to(DEVICE)
                 labels = labels.to(DEVICE)
@@ -99,28 +102,29 @@ class Train:
                             epoch + 1, num_epochs, i + 1, n_total_steps, loss.item()
                         )
                     )
-            end = torch.cuda.Event(enable_timing=True)
-            end.record()
-            torch.cuda.synchronize()
-            test_accuracy = self.__test()
-            len_self_loader = len(train_loader)
-            running_accuracy /= len_self_loader
-            running_loss /= len_self_loader
-            print(
-                "Epoch {} | Test accuracy {} | Training accuracy: {}".format(
-                    epoch + 1, test_accuracy * 100, running_accuracy * 100
-                )
-            )
-            self.__running_time += start.elapsed_time(
-                end
-            )  # https://discuss.pytorch.org/t/how-to-measure-time-in-pytorch/26964
-            self.recordAccuracy(
-                self.__running_time,
-                epoch,
-                running_loss,
-                test_accuracy,
-                running_accuracy.item(),
-            )
+            if torch.cuda.is_available() is True:
+              end = torch.cuda.Event(enable_timing=True)
+              end.record()
+              torch.cuda.synchronize()
+              test_accuracy = self.__test()
+              len_self_loader = len(train_loader)
+              running_accuracy /= len_self_loader
+              running_loss /= len_self_loader
+              print(
+                  "Epoch {} | Test accuracy {} | Training accuracy: {}".format(
+                      epoch + 1, test_accuracy * 100, running_accuracy * 100
+                  )
+              )
+              self.__running_time += start.elapsed_time(
+                  end
+              )  # https://discuss.pytorch.org/t/how-to-measure-time-in-pytorch/26964
+              self.recordAccuracy(
+                  self.__running_time,
+                  epoch,
+                  running_loss,
+                  test_accuracy,
+                  running_accuracy.item(),
+              )
 
     def __test(self):
         self.model.eval()
