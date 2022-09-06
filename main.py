@@ -122,7 +122,7 @@ if __name__ == "__main__":
     learning_rate = args.learning_rate
     num_epochs = args.epochs
     model_choice = args.model.lower()
-    filename = args.filename.lower()
+    filename = args.filename.lower() + ".csv"
 
     model: BaseModel
     train: Train
