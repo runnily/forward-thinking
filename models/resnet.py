@@ -8,6 +8,7 @@ resnet using forward-thinking
     the implementation of the forward-thinking algorthium to train a resnet neural network.
 """
 
+from pickle import TRUE
 import torch.nn as nn
 
 try:
@@ -24,7 +25,7 @@ class BasicBlock(BaseModel):
     # we use class attribute expansion
     # to distinct
 
-    def __init__(self, in_channels, out_channels, batch_norm, stride=2, init_weights=True):
+    def __init__(self, in_channels, out_channels, batch_norm, stride=2, init_weights=True, affine=True):
         # residual function f0, f1
         f0 = nn.Sequential(
             *conv_2d(
@@ -35,6 +36,7 @@ class BasicBlock(BaseModel):
                 padding=1,
                 bias=False,
                 batch_norm=batch_norm,
+                affine=affine
             ),
             nn.ReLU(inplace=True),
         )
@@ -52,6 +54,7 @@ class BasicBlock(BaseModel):
                 padding=1,
                 bias=False,
                 batch_norm=batch_norm,
+                affine=affine
             )
         )
 
@@ -70,6 +73,7 @@ class BasicBlock(BaseModel):
                     padding=0,
                     bias=False,
                     batch_norm=batch_norm,
+                    affine=affine,
                 )
             )
         self.current_layers = nn.Sequential(*self.incoming_layers)
@@ -83,7 +87,7 @@ class BottleNeck(BaseModel):
     Residual block for resnet over 50 layers
     """
 
-    def __init__(self, in_channels, out_channels, batch_norm, stride=1, init_weights=True):
+    def __init__(self, in_channels, out_channels, batch_norm, stride=1, init_weights=True, affine=True):
         out_channels_f0 = out_channels // 4
         f0 = nn.Sequential(
             *conv_2d(
@@ -94,6 +98,7 @@ class BottleNeck(BaseModel):
                 padding=0,
                 bias=False,
                 batch_norm=batch_norm,
+                affine=affine,
             ),
             nn.ReLU(inplace=True),
             *conv_2d(
@@ -104,6 +109,7 @@ class BottleNeck(BaseModel):
                 padding=1,
                 bias=False,
                 batch_norm=batch_norm,
+                affine=affine,
             ),
             nn.ReLU(inplace=True),
         )
@@ -119,6 +125,7 @@ class BottleNeck(BaseModel):
                 padding=0,
                 bias=False,
                 batch_norm=batch_norm,
+                affine=affine,
             )
         )
 
@@ -134,6 +141,7 @@ class BottleNeck(BaseModel):
                     padding=0,
                     bias=True,
                     batch_norm=batch_norm,
+                    affine=affine,
                 )
             )
 
@@ -144,10 +152,10 @@ class BottleNeck(BaseModel):
 
 
 class ResNet(BaseModel):
-    def __init__(self, block, num_block, batch_norm, num_classes=100, init_weights=True):
+    def __init__(self, block, num_block, batch_norm, num_classes=100, init_weights=True, affine=True):
 
         layer_1 = nn.Sequential(
-            *conv_2d(3, 64, kernel_size=3, stride=1, padding=1, bias=True, batch_norm=batch_norm),
+            *conv_2d(3, 64, kernel_size=3, stride=1, padding=1, bias=True, batch_norm=batch_norm, affine=affine),
             nn.ReLU(inplace=True),
         )
 
@@ -166,6 +174,7 @@ class ResNet(BaseModel):
             batch_norm,
             init_weights,
             stride=1,
+            affine=affine,
         )
         layer_3 = self._make_layer(
             block,
@@ -175,6 +184,7 @@ class ResNet(BaseModel):
             batch_norm,
             init_weights,
             stride=2,
+            affine=affine,
         )
         layer_4 = self._make_layer(
             block,
@@ -184,6 +194,7 @@ class ResNet(BaseModel):
             batch_norm,
             init_weights,
             stride=2,
+            affine=affine,
         )
         layer_5 = self._make_layer(
             block,
@@ -193,6 +204,7 @@ class ResNet(BaseModel):
             batch_norm,
             init_weights,
             stride=2,
+            affine=affine,
         )
 
         super(ResNet, self).__init__(
@@ -206,7 +218,7 @@ class ResNet(BaseModel):
         self.output = nn.LazyLinear(num_features[4], num_classes)
 
     def _make_layer(
-        self, block, in_channels, out_channels, num_blocks, batch_norm, init_weights, stride
+        self, block, in_channels, out_channels, num_blocks, batch_norm, init_weights, stride, affine
     ):
         """make resnet layers(by layer i didnt mean this 'layer' was the
         same as a neuron netowork layer, ex. conv layer), one layer may
@@ -223,7 +235,7 @@ class ResNet(BaseModel):
         # we have num_block blocks per layer, the first block
         # could be 1 or 2, other blocks would always be 1
         layers = nn.Sequential(
-            block(in_channels, out_channels, batch_norm, stride=stride, init_weights=init_weights)
+            block(in_channels, out_channels, batch_norm, stride=stride, init_weights=init_weights, affine=affine)
         )
         for i in range(1, num_blocks):
             layers.append(
@@ -233,6 +245,7 @@ class ResNet(BaseModel):
                     batch_norm,
                     stride=inner_stride,
                     init_weights=init_weights,
+                    affine=affine,
                 )
             )
 
@@ -245,26 +258,26 @@ class ResNet(BaseModel):
         return output
 
 
-def resnet18(batch_norm, num_classes=100, init_weights=True):
+def resnet18(batch_norm, num_classes=100, init_weights=True, affine=True):
     """return a ResNet 18 object"""
-    return ResNet(BasicBlock, [2, 2, 2, 2], batch_norm, num_classes=100, init_weights=True)
+    return ResNet(BasicBlock, [2, 2, 2, 2], batch_norm, num_classes, init_weights, affine)
 
 
-def resnet34(batch_norm, num_classes=100, init_weights=True):
+def resnet34(batch_norm, num_classes=100, init_weights=True, affine=True):
     """return a ResNet 34 object"""
-    return ResNet(BasicBlock, [3, 4, 6, 3], batch_norm, num_classes=100, init_weights=True)
+    return ResNet(BasicBlock, [3, 4, 6, 3], batch_norm, num_classes, init_weights, affine)
 
 
-def resnet50(batch_norm, num_classes=100, init_weights=True):
+def resnet50(batch_norm, num_classes=100, init_weights=True, affine=True):
     """return a ResNet 50 object"""
-    return ResNet(BottleNeck, [3, 4, 6, 3], batch_norm, num_classes=100, init_weights=True)
+    return ResNet(BottleNeck, [3, 4, 6, 3], batch_norm, num_classes, init_weights, affine)
 
 
-def resnet101(batch_norm, num_classes=100, init_weights=True):
+def resnet101(batch_norm, num_classes=100, init_weights=True, affine=True):
     """return a ResNet 101 object"""
-    return ResNet(BottleNeck, [3, 4, 23, 3])
+    return ResNet(BottleNeck, [3, 4, 23, 3], batch_norm, num_classes, init_weights, affine)
 
 
-def resnet152(batch_norm, num_classes=100, init_weights=True):
+def resnet152(batch_norm, num_classes=100, init_weights=True, affine=True):
     """return a ResNet 152 object"""
-    return ResNet(BottleNeck, [3, 8, 36, 3], batch_norm, num_classes=100, init_weights=True)
+    return ResNet(BottleNeck, [3, 8, 36, 3], batch_norm, num_classes, init_weights, affine)

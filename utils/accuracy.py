@@ -13,7 +13,6 @@ class Measure:
             "Train accuracy": self.train_accuracy,
             "Test accuracy": self.test_accuracy,
         }
-        self.init = False
         self.CONVERT_TO_SECONDS_METRIC = 1000
 
     def recordAccuracy(self, time_elapsed, epoch, loss, test_accuracy, train_accuracy):
@@ -22,7 +21,6 @@ class Measure:
         self.loss.append(loss)
         self.test_accuracy.append(test_accuracy)
         self.train_accuracy.append(train_accuracy)
-        self.init = True
         return self.getDict()
 
     def __str__(self):
@@ -34,12 +32,10 @@ class Measure:
             string += "\n |{:>3}|{:>20}|".format(num, *row)
         return string
 
-    def __clear(self):
+    def clear(self):
         self.__vals = [[] for array in self.__vals]
 
     def __call__(self, time_elapsed, epoch, loss, test_accuracy, train_accuracy):
-        if self.init:
-            self.__clear()
         return self.recordAccuracy(time_elapsed, epoch, loss, test_accuracy, train_accuracy)
 
     def getDict(self):

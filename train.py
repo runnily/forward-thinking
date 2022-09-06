@@ -50,19 +50,11 @@ class Train:
         self.recordAccuracy = utils.Measure()
         self.__running_time = 0.00
         self.get_loader: Optional[Dict[nn.Module, DataLoader]]
-        self.optimizer = optim.SGD(
-            model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=5e-4
-        )
-        self.scheduler = optim.lr_scheduler.MultiStepLR(
-            self.optimizer, milestones=MILESTONES, gamma=0.2
-        )
 
     def get_train_loader(self, layer: nn.Module) -> DataLoader:
         pass
 
     def _optimizer(self, parameters_to_be_optimized):
-        if self.backpropgate is True:
-            return self.optimizer
         return optim.SGD(
             parameters_to_be_optimized, lr=self.learning_rate, momentum=0.9, weight_decay=5e-4
         )
@@ -79,8 +71,6 @@ class Train:
 
         for epoch in range(num_epochs):
             self.model.train()
-            if self.backpropgate is True:
-                  self.scheduler.step()
             running_loss = 0.00
             running_accuracy = 0.00
             if torch.cuda.is_available() is True:

@@ -89,6 +89,14 @@ if __name__ == "__main__":
         ),
     )
     parser.add_argument(
+        "--affine", 
+        default=1,
+        type=int, 
+        help=(
+              "Define whether batch norm has learnable affine parameters. (1) yes for"
+              " learnable parameters, (0) no learnable affine parameters"),
+    )
+    parser.add_argument(
         "--freeze_batch_norm_layers",
         default=0,
         type=int,
@@ -125,49 +133,49 @@ if __name__ == "__main__":
 
     if model_choice == "simplenet":
         model = SimpleNet(
-            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights
+            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights, affine=args.affine
         )
     if model_choice == "convnet":
         model = Convnet2(
-            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights
+            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights, affine=args.affine
         )
     if model_choice == "feedforward":
         model = FeedForward()
     if model_choice == "resnet18":
         model = resnet18(
-            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights
+            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights, affine=args.affine
         )
     if model_choice == "resnet34":
         model = resnet34(
-            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights
+            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights, affine=args.affine
         )
     if model_choice == "resnet50":
         model = resnet50(
-            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights
+            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights, affine=args.affine
         )
     if model_choice == "resnet101":
         model = resnet101(
-            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights
+            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights, affine=args.affine
         )
     if model_choice == "resnet152":
         model = resnet152(
-            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights
+            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights, affine=args.affine
         )
     if model_choice == "vgg11":
         model = vgg11(
-            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights
+            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights, affine=args.affine
         )
     if model_choice == "vgg13":
         model = vgg13(
-            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights
+            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights, affine=args.affine
         )
     if model_choice == "vgg16":
         model = vgg16(
-            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights
+            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights, affine=args.affine
         )
     if model_choice == "vgg19":
         model = vgg19(
-            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights
+            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights, affine=args.affine
         )
 
     if args.multisource == 1 and args.forward_thinking == 1:
