@@ -186,7 +186,7 @@ if __name__ == "__main__":
                     "./data", train=True, download=True, transform=get_transform()
                 ),
                 test_dataset=globals()[dataset](
-                    "./data", train=True, download=True, transform=get_transform()
+                    "./data", train=False, download=True, transform=get_transform()
                 ),
                 freeze_batch_layers=args.freeze_batch_norm_layers,
                 learning_rate=args.learning_rate,

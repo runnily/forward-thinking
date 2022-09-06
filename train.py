@@ -319,7 +319,7 @@ class TrainWithDataSet(Train):
             self.get_loader[layer_key] = []
         self.get_loader[self.model.output] = []
 
-        num_data_per_layer = int(len(train_dataset.targets) / self.model.num_classes)
+        num_data_per_layer = 2000 #int(len(train_dataset.targets) / self.model.num_classes)
         self.get_loader = utils.divide_data_by_group(
             train_dataset,
             num_data_per_layer,

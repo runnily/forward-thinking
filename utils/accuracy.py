@@ -13,7 +13,7 @@ class Measure:
             "Train accuracy": self.train_accuracy,
             "Test accuracy": self.test_accuracy,
         }
-        self.CONVERT_TO_SECONDS_METRIC = 1000
+        self.CONVERT_TO_SECONDS_METRIC = 1500
 
     def recordAccuracy(self, time_elapsed, epoch, loss, test_accuracy, train_accuracy):
         self.time_elapsed.append(time_elapsed / self.CONVERT_TO_SECONDS_METRIC)
