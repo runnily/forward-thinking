@@ -307,6 +307,7 @@ class TrainWithDataSet(Train):
         learning_rate: int,
         num_epochs: int,
         batch_size: int,
+        num_data_per_layer: int,
     ) -> None:
         super().__init__(model, False, freeze_batch_layers, learning_rate, num_epochs)
         self.train_dataset = train_dataset
@@ -319,7 +320,7 @@ class TrainWithDataSet(Train):
             self.get_loader[layer_key] = []
         self.get_loader[self.model.output] = []
 
-        num_data_per_layer = 2000 #int(len(train_dataset.targets) / self.model.num_classes)
+        self.num_data_per_layer = num_data_per_layer
         self.get_loader = utils.divide_data_by_group(
             train_dataset,
             num_data_per_layer,

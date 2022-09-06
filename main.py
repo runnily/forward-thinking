@@ -30,6 +30,12 @@ if __name__ == "__main__":
         choices=["cifar10", "cifar100", "svhn", "mnist"],
         help="Choose a dataset to use",
     )
+    parser.add_argument(
+        "--num_data_per_layer",
+        default=500,
+        type=int,
+        help="Defines how number of layers in the neural network when using multisource training",
+    )
     parser.add_argument("--learning_rate", type=float, default=0.01, help="Choose a learning rate ")
     parser.add_argument(
         "--model",
@@ -192,6 +198,7 @@ if __name__ == "__main__":
                 learning_rate=args.learning_rate,
                 num_epochs=args.epochs,
                 batch_size=batch_size,
+                num_data_per_layer=args.num_data_per_layer
             )
         else:
             raise ValueError("Can only perform action with the CIFAR datasets")
