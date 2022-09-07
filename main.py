@@ -1,7 +1,8 @@
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
-from torchvision.datasets import CIFAR10, CIFAR100
+from torchvision.datasets import CIFAR10, CIFAR100, SVHN
 from torch.utils.data import ConcatDataset
+import torch
 
 from models import (
     BaseModel,
@@ -186,16 +187,13 @@ if __name__ == "__main__":
         )
 
     if args.multisource == 1 and args.forward_thinking == 1:
+        train_dataset = None
+        test_dataset = None
         if dataset == "SVHN":
-            ConcatDataset()
-            train_data_1 = globals()[dataset](
-              root="./data", split="train", download=True, transform=get_transform()
-            )
-            train_data_2 = globals()[dataset](
+            train_dataset = globals()[dataset](
               root="./data", split="extra", download=True, transform=get_transform()
             )
-            train_data = ConcatDataset([train_data_1, train_data_2])
-            test_data = globals()[dataset](root="./data", split="test", download=True, transform=get_transform())
+            test_dataset = globals()[dataset](root="./data", split="test", download=True, transform=get_transform())
         elif dataset in {"CIFAR10", "CIFAR100"}:
             train_dataset=globals()[dataset](
                   "./data", train=True, download=True, transform=get_transform()

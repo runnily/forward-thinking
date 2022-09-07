@@ -38,10 +38,16 @@ def get_transform():
 def divide_data_by_group(
     dataset: int, num_data_per_group: int, batch_size: int, groups: Dict[nn.Module, List]
 ) -> Optional[Dict[nn.Module, DataLoader]]:
-    targets = set(dataset.targets)
+    try:
+      targets = set(dataset.targets)
+    except AttributeError:
+      targets = set(dataset.labels)
     selected_indices = 0
     for target in targets:
-        selected_target_idx = torch.tensor(dataset.targets) == target
+        try:
+          selected_target_idx = torch.tensor(dataset.targets) == target
+        except AttributeError:
+          selected_target_idx = torch.tensor(dataset.labels) == target
         selected_target_idx = selected_target_idx.nonzero().reshape(-1)
         for group in groups:
             group_target_idx = selected_target_idx[
@@ -53,6 +59,7 @@ def divide_data_by_group(
     groups_data_loader = {}
     for group in groups:
         if len(groups[group]) > 0:
+            print(len(groups[group]))
             data = Subset(dataset, groups[group])
             groups_data_loader[group] = DataLoader(data, batch_size=batch_size, shuffle=True)
     return groups_data_loader
