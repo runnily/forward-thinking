@@ -33,7 +33,6 @@ class VGG(BaseModel):
             nn.Dropout(),
             nn.Linear(4096, num_classes),
         )
-
     def forward(self, x):
         output = self.current_layers(x)
         output = output.view(output.size()[0], -1)

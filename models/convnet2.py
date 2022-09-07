@@ -24,7 +24,7 @@ class Convnet2(BaseModel):
             nn.Sequential(*conv_2d_relu(128, 128, (3, 3), batch_norm, padding=1, affine=affine)),
             # 4 : kernel: 3x3, channel: 128, padding: 1
             nn.Sequential(
-                *conv_2d_relu(128, 256, (3, 3), batch_norm, padding=1),
+                *conv_2d_relu(128, 256, (3, 3), batch_norm, padding=1, affine=affine),
                 nn.MaxPool2d(kernel_size=(2, 2), stride=2),
                 nn.Dropout(p=0.25)
             ),
