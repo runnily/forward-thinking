@@ -1,6 +1,7 @@
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
 from torchvision.datasets import CIFAR10, CIFAR100
+from torch.utils.data import ConcatDataset
 
 from models import (
     BaseModel,
@@ -185,23 +186,36 @@ if __name__ == "__main__":
         )
 
     if args.multisource == 1 and args.forward_thinking == 1:
-        if dataset in {"CIFAR10", "CIFAR100"}:
-            train = TrainWithDataSet(
-                model=model,
-                train_dataset=globals()[dataset](
-                    "./data", train=True, download=True, transform=get_transform()
-                ),
-                test_dataset=globals()[dataset](
-                    "./data", train=False, download=True, transform=get_transform()
-                ),
-                freeze_batch_layers=args.freeze_batch_norm_layers,
-                learning_rate=args.learning_rate,
-                num_epochs=args.epochs,
-                batch_size=batch_size,
-                num_data_per_layer=args.num_data_per_layer
+        if dataset == "SVHN":
+            ConcatDataset()
+            train_data_1 = globals()[dataset](
+              root="./data", split="train", download=True, transform=get_transform()
+            )
+            train_data_2 = globals()[dataset](
+              root="./data", split="extra", download=True, transform=get_transform()
+            )
+            train_data = ConcatDataset([train_data_1, train_data_2])
+            test_data = globals()[dataset](root="./data", split="test", download=True, transform=get_transform())
+        elif dataset in {"CIFAR10", "CIFAR100"}:
+            train_dataset=globals()[dataset](
+                  "./data", train=True, download=True, transform=get_transform()
+            )
+            test_dataset=globals()[dataset](
+                  "./data", train=False, download=True, transform=get_transform()
             )
         else:
             raise ValueError("Can only perform action with the CIFAR datasets")
+        train = TrainWithDataSet(
+            model=model,
+            train_dataset=train_dataset,
+            test_dataset=test_dataset,
+            freeze_batch_layers=args.freeze_batch_norm_layers,
+            learning_rate=args.learning_rate,
+            num_epochs=args.epochs,
+            batch_size=batch_size,
+            num_data_per_layer=args.num_data_per_layer
+        )
+        
 
     assert (args.multisource == 1 and args.forward_thinking != 0) or (
         args.multisource == 0
