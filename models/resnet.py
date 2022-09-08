@@ -216,7 +216,6 @@ class ResNet(BaseModel):
         )
         self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
         self.output = nn.LazyLinear(num_features[4], num_classes)
-
     def _make_layer(
         self, block, in_channels, out_channels, num_blocks, batch_norm, init_weights, stride, affine
     ):
