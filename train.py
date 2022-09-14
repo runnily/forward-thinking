@@ -50,19 +50,11 @@ class Train:
         self.recordAccuracy = utils.Measure()
         self.__running_time = 0.00
         self.get_loader: Optional[Dict[nn.Module, DataLoader]]
-        self.optimizer = optim.SGD(
-            model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=5e-4
-        )
-        self.scheduler = optim.lr_scheduler.MultiStepLR(
-            self.optimizer, milestones=MILESTONES, gamma=0.2
-        )
 
     def get_train_loader(self, layer: nn.Module) -> DataLoader:
         pass
 
     def _optimizer(self, parameters_to_be_optimized):
-        if self.backpropgate is True:
-            return self.optimizer
         return optim.SGD(
             parameters_to_be_optimized, lr=self.learning_rate, momentum=0.9, weight_decay=5e-4
         )
@@ -81,8 +73,9 @@ class Train:
             self.model.train()
             running_loss = 0.00
             running_accuracy = 0.00
-            start = torch.cuda.Event(enable_timing=True)
-            start.record()
+            if torch.cuda.is_available() is True:
+              start = torch.cuda.Event(enable_timing=True)
+              start.record()
             for i, (images, labels) in enumerate(train_loader, 0):
                 images = images.to(DEVICE)
                 labels = labels.to(DEVICE)
@@ -99,28 +92,29 @@ class Train:
                             epoch + 1, num_epochs, i + 1, n_total_steps, loss.item()
                         )
                     )
-            end = torch.cuda.Event(enable_timing=True)
-            end.record()
-            torch.cuda.synchronize()
-            test_accuracy = self.__test()
-            len_self_loader = len(train_loader)
-            running_accuracy /= len_self_loader
-            running_loss /= len_self_loader
-            print(
-                "Epoch {} | Test accuracy {} | Training accuracy: {}".format(
-                    epoch + 1, test_accuracy * 100, running_accuracy * 100
-                )
-            )
-            self.__running_time += start.elapsed_time(
-                end
-            )  # https://discuss.pytorch.org/t/how-to-measure-time-in-pytorch/26964
-            self.recordAccuracy(
-                self.__running_time,
-                epoch,
-                running_loss,
-                test_accuracy,
-                running_accuracy.item(),
-            )
+            if torch.cuda.is_available() is True:
+              end = torch.cuda.Event(enable_timing=True)
+              end.record()
+              torch.cuda.synchronize()
+              test_accuracy = self.__test()
+              len_self_loader = len(train_loader)
+              running_accuracy /= len_self_loader
+              running_loss /= len_self_loader
+              print(
+                  "Epoch {} | Test accuracy {} | Training accuracy: {}".format(
+                      epoch + 1, test_accuracy * 100, running_accuracy * 100
+                  )
+              )
+              self.__running_time += start.elapsed_time(
+                  end
+              )  # https://discuss.pytorch.org/t/how-to-measure-time-in-pytorch/26964
+              self.recordAccuracy(
+                  self.__running_time,
+                  epoch,
+                  running_loss,
+                  test_accuracy,
+                  running_accuracy.item(),
+              )
 
     def __test(self):
         self.model.eval()
@@ -313,6 +307,7 @@ class TrainWithDataSet(Train):
         learning_rate: int,
         num_epochs: int,
         batch_size: int,
+        num_data_per_layer: int,
     ) -> None:
         super().__init__(model, False, freeze_batch_layers, learning_rate, num_epochs)
         self.train_dataset = train_dataset
@@ -325,10 +320,10 @@ class TrainWithDataSet(Train):
             self.get_loader[layer_key] = []
         self.get_loader[self.model.output] = []
 
-        num_data_per_layer = int(len(train_dataset.targets) / self.model.num_classes)
+        self.num_classes_per_data = num_data_per_layer//model.num_classes
         self.get_loader = utils.divide_data_by_group(
             train_dataset,
-            num_data_per_layer,
+            self.num_classes_per_data,
             batch_size=batch_size,
             groups=self.get_loader,
         )

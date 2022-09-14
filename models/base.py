@@ -26,7 +26,7 @@ class BaseModel(nn.Module):
                     nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
                     if m.bias is not None:
                         nn.init.constant_(m.bias, 0)
-                if isinstance(m, nn.BatchNorm2d):
+                if isinstance(m, nn.BatchNorm2d) and m.affine is True:
                     nn.init.constant_(m.weight, 1)
                     nn.init.constant_(m.bias, 0)
                 if isinstance(m, nn.Linear):
@@ -36,9 +36,10 @@ class BaseModel(nn.Module):
 
 
 def conv_2d(in_features, out_features, kernel_size, batch_norm, **kwargs):
+    affine = kwargs.pop("affine", True)
     conv_2d = nn.Conv2d(in_features, out_features, kernel_size=kernel_size, **kwargs)
-    if batch_norm is True:
-        batch_norm = nn.BatchNorm2d(out_features, eps=1e-05, momentum=0.05, affine=True)
+    if batch_norm:
+        batch_norm = nn.BatchNorm2d(out_features, eps=1e-05, momentum=0.05, affine=affine)
         return conv_2d, batch_norm
     return (conv_2d,)
 

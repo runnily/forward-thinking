@@ -1,6 +1,8 @@
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
-from torchvision.datasets import CIFAR10, CIFAR100
+from torchvision.datasets import CIFAR10, CIFAR100, SVHN
+from torch.utils.data import ConcatDataset
+import torch
 
 from models import (
     BaseModel,
@@ -29,6 +31,12 @@ if __name__ == "__main__":
         type=str,
         choices=["cifar10", "cifar100", "svhn", "mnist"],
         help="Choose a dataset to use",
+    )
+    parser.add_argument(
+        "--num_data_per_layer",
+        default=500,
+        type=int,
+        help="Defines how number of layers in the neural network when using multisource training",
     )
     parser.add_argument("--learning_rate", type=float, default=0.01, help="Choose a learning rate ")
     parser.add_argument(
@@ -89,6 +97,14 @@ if __name__ == "__main__":
         ),
     )
     parser.add_argument(
+        "--affine", 
+        default=1,
+        type=int, 
+        help=(
+              "Define whether batch norm has learnable affine parameters. (1) yes for"
+              " learnable parameters, (0) no learnable affine parameters"),
+    )
+    parser.add_argument(
         "--freeze_batch_norm_layers",
         default=0,
         type=int,
@@ -98,6 +114,15 @@ if __name__ == "__main__":
             " layers during training"
         ),
     )
+    parser.add_argument(
+        "--filename",
+        default="accuracy",
+        type=str,
+        help=(
+            "where to save the metrics logs (accuracy etc). All files will be saved as .csv types"
+            "in the utils/recorded-accuracy folder"
+        ),
+    )
 
     args = parser.parse_args()
     dataset = args.dataset.upper()
@@ -105,7 +130,11 @@ if __name__ == "__main__":
     learning_rate = args.learning_rate
     num_epochs = args.epochs
     model_choice = args.model.lower()
-
+    filename = args.filename.lower() + ".csv"
+    affine = True if (args.affine == 1) else False
+    batch_norm = True if (args.batch_norm == 1) else False
+    init_weights = True if (args.init_weights == 1) else False
+    freeze_batch_norm_layers = True if (args.freeze_batch_norm_layers == 1) else False
     model: BaseModel
     train: Train
 
@@ -115,68 +144,79 @@ if __name__ == "__main__":
 
     if model_choice == "simplenet":
         model = SimpleNet(
-            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights
+            num_classes=args.num_classes, batch_norm=batch_norm, init_weights=init_weights, affine=affine
         )
     if model_choice == "convnet":
         model = Convnet2(
-            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights
+            num_classes=args.num_classes, batch_norm=batch_norm, init_weights=init_weights, affine=affine
         )
     if model_choice == "feedforward":
         model = FeedForward()
     if model_choice == "resnet18":
         model = resnet18(
-            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights
+            num_classes=args.num_classes, batch_norm=batch_norm, init_weights=init_weights, affine=affine
         )
     if model_choice == "resnet34":
         model = resnet34(
-            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights
+            num_classes=args.num_classes, batch_norm=batch_norm, init_weights=init_weights, affine=affine
         )
     if model_choice == "resnet50":
         model = resnet50(
-            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights
+            num_classes=args.num_classes, batch_norm=batch_norm, init_weights=init_weights, affine=affine
         )
     if model_choice == "resnet101":
         model = resnet101(
-            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights
+            num_classes=args.num_classes, batch_norm=batch_norm, init_weights=init_weights, affine=affine
         )
     if model_choice == "resnet152":
         model = resnet152(
-            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights
+            num_classes=args.num_classes, batch_norm=batch_norm, init_weights=init_weights, affine=affine
         )
     if model_choice == "vgg11":
         model = vgg11(
-            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights
+            num_classes=args.num_classes, batch_norm=batch_norm, init_weights=init_weights, affine=affine
         )
     if model_choice == "vgg13":
         model = vgg13(
-            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights
+            num_classes=args.num_classes, batch_norm=batch_norm, init_weights=init_weights, affine=affine
         )
     if model_choice == "vgg16":
         model = vgg16(
-            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights
+            num_classes=args.num_classes, batch_norm=batch_norm, init_weights=init_weights, affine=affine
         )
     if model_choice == "vgg19":
         model = vgg19(
-            num_classes=args.num_classes, batch_norm=args.batch_norm, init_weights=args.init_weights
+            num_classes=args.num_classes, batch_norm=batch_norm, init_weights=init_weights, affine=affine
         )
 
     if args.multisource == 1 and args.forward_thinking == 1:
-        if dataset in {"CIFAR10", "CIFAR100"}:
-            train = TrainWithDataSet(
-                model=model,
-                train_dataset=globals()[dataset](
-                    "./data", train=True, download=True, transform=get_transform()
-                ),
-                test_dataset=globals()[dataset](
-                    "./data", train=True, download=True, transform=get_transform()
-                ),
-                freeze_batch_layers=args.freeze_batch_norm_layers,
-                learning_rate=args.learning_rate,
-                num_epochs=args.epochs,
-                batch_size=batch_size,
+        train_dataset = None
+        test_dataset = None
+        if dataset == "SVHN":
+            train_dataset = globals()[dataset](
+              root="./data", split="extra", download=True, transform=get_transform()
+            )
+            test_dataset = globals()[dataset](root="./data", split="test", download=True, transform=get_transform())
+        elif dataset in {"CIFAR10", "CIFAR100"}:
+            train_dataset=globals()[dataset](
+                  "./data", train=True, download=True, transform=get_transform()
+            )
+            test_dataset=globals()[dataset](
+                  "./data", train=False, download=True, transform=get_transform()
             )
         else:
             raise ValueError("Can only perform action with the CIFAR datasets")
+        train = TrainWithDataSet(
+            model=model,
+            train_dataset=train_dataset,
+            test_dataset=test_dataset,
+            freeze_batch_layers=freeze_batch_norm_layers,
+            learning_rate=args.learning_rate,
+            num_epochs=args.epochs,
+            batch_size=batch_size,
+            num_data_per_layer=args.num_data_per_layer
+        )
+        
 
     assert (args.multisource == 1 and args.forward_thinking != 0) or (
         args.multisource == 0
@@ -190,10 +230,10 @@ if __name__ == "__main__":
             train_loader=train_loader,
             test_loader=test_loader,
             backpropgate=backpropgate,
-            freeze_batch_layers=args.freeze_batch_norm_layers,
+            freeze_batch_layers=freeze_batch_norm_layers,
             learning_rate=learning_rate,
             num_epochs=num_epochs,
         )
 
     train.add_layers()
-    train.recordAccuracy.save()
+    train.recordAccuracy.save(filename)
