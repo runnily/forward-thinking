@@ -5,16 +5,16 @@
 ![Github workflow](https://github.com/runnily/forward-thinking/actions/workflows/docker-image.yml/badge.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/runnily/forward-thinking)
 
-The code for the forward-thinking algorithm. Forward-thinking algorithm constructs a neural
+The code for the forward-thinking algorithm. A forward-thinking algorithm constructs a neural
 network layer by layer, choosing the next layer in such a way that it provides the best parameters (weights and biases) that fit the layer. The algorithm can be extended to multiple source transfer learning whereby the sample dataset is subdivided into unique sets for each layer. 
 
-The code allows you to train using the CIFAR10, SVHN and MNIST dataset. 
+The code allows you to train using the CIFAR10, SVHN and MNIST datasets. 
 - All architectures except "FeedForward" can be trained using the CIFAR10, SVHN dataset
-- Feedforwad can only be trained using the MNIST dataset
+- Feedforward can only be trained using the MNIST dataset
 
 
 ## Usage
-This is tested to work on python 3.8-3.10. You can either run the code using docker or runnng on your local PC. 
+This is tested to work on python 3.8-3.10. You can either run the code using docker or run it on your local PC. When you run `python main.py ...` make sure your within the forward-thinking folder.
 
 (1) Using Docker
 ```
@@ -34,7 +34,7 @@ pip install -r requirements.txt
 python main.py --dataset=cifar10 --model=resnet18 --learning_rate=0.01 --num_classes=10 --batch_size=64 --epochs=5 --forward_thinking=1 --multisource=0 --init_weights=0 --batch_norm=0 --freeze_batch_norm_layers=0
 ```
 
-optional arguments:
+other optional arguments:
 
 ```
   -h, --help            show this help message and exit
@@ -69,4 +69,4 @@ optional arguments:
 
 ## Additional notes
 Performance metrics are created with computers that have GPUs that support CUDA 9.0. 
-These performance metrics are usually logged and saved within 'utils/recorded-accuracy'.
+These performance metrics are usually logged and saved within `utils/recorded-accuracy`.
